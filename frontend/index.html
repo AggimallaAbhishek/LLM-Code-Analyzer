@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Code Analyzer</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔍 LLM Code Analyzer</h1>
+            <p class="subtitle">AI-powered security vulnerability detection</p>
+        </header>
+
+        <main>
+            <section class="input-section">
+                <div class="input-header">
+                    <label for="code-input">Paste your code below:</label>
+                    <select id="language-select">
+                        <option value="auto">Auto-detect</option>
+                        <option value="python">Python</option>
+                        <option value="javascript">JavaScript</option>
+                        <option value="java">Java</option>
+                        <option value="c">C/C++</option>
+                        <option value="php">PHP</option>
+                    </select>
+                </div>
+                <textarea id="code-input" placeholder="// Paste your code here...
+// Example:
+query = 'SELECT * FROM users WHERE id = ' + user_input"></textarea>
+                <div class="button-group">
+                    <button id="analyze-btn" class="primary-btn">
+                        <span class="btn-text">🔎 Analyze Code</span>
+                        <span class="spinner hidden"></span>
+                    </button>
+                    <button id="clear-btn" class="secondary-btn">Clear</button>
+                    <button id="sample-btn" class="secondary-btn">Load Sample</button>
+                </div>
+            </section>
+
+            <section id="results-section" class="results-section hidden">
+                <div class="results-header">
+                    <h2>Analysis Results</h2>
+                    <div id="risk-badge" class="risk-badge">
+                        <span class="risk-label">Risk Score:</span>
+                        <span id="risk-score" class="risk-score">--</span>
+                    </div>
+                </div>
+
+                <div id="summary" class="summary-box"></div>
+
+                <div class="tabs">
+                    <button class="tab-btn active" data-tab="vulnerabilities">
+                        🚨 Vulnerabilities <span id="vuln-count" class="count-badge">0</span>
+                    </button>
+                    <button class="tab-btn" data-tab="attack-surfaces">
+                        🎯 Attack Surfaces <span id="surface-count" class="count-badge">0</span>
+                    </button>
+                    <button class="tab-btn" data-tab="trust-boundaries">
+                        🔐 Trust Boundaries <span id="boundary-count" class="count-badge">0</span>
+                    </button>
+                    <button class="tab-btn" data-tab="recommendations">
+                        💡 Recommendations
+                    </button>
+                </div>
+
+                <div id="tab-content" class="tab-content">
+                    <!-- Dynamic content loaded here -->
+                </div>
+            </section>
+
+            <section id="error-section" class="error-section hidden">
+                <div class="error-box">
+                    <h3>⚠️ Analysis Error</h3>
+                    <p id="error-message"></p>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>Powered by LLM + Static Analysis | 
+               <span id="llm-mode">Mode: --</span> | 
+               <a href="/docs" target="_blank">API Docs</a>
+            </p>
+        </footer>
+    </div>
+
+    <script src="/static/js/script.js"></script>
+</body>
+</html>
