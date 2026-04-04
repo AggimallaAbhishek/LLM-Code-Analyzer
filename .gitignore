@@ -32,3 +32,8 @@ logs/
 .pytest_cache/
 .coverage
 htmlcov/
+
+# OAuth Setup Docs (contain sensitive setup info)
+OAUTH_SETUP.md
+FIX_AUTH.md
+

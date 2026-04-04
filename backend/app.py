@@ -10,11 +10,42 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from starlette.middleware.sessions import SessionMiddleware
+from contextlib import asynccontextmanager
 import os
 
 from backend.routes.analyze import router as analyze_router
 from backend.routes.auth import router as auth_router
 from backend.config import settings
+
+# Lifespan event handler (replaces deprecated on_event)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Handle startup and shutdown events."""
+    # Startup
+    frontend_dist = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
+    print(f"🚀 LLM Code Analyser starting...")
+    print(f"📊 Mode: {settings.llm_mode}")
+    if settings.llm_mode == "openai":
+        print(f"🤖 Model: {settings.openai_model}")
+    elif settings.llm_mode == "gemini":
+        print(f"🤖 Model: {settings.gemini_model}")
+    else:
+        print(f"🤖 Model: {settings.ollama_model}")
+    
+    # Auth status
+    if settings.google_client_id and settings.google_client_secret:
+        print(f"🔐 Google OAuth: Configured")
+    else:
+        print(f"⚠️  Google OAuth: Not configured (set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET)")
+    
+    print(f"📖 API docs available at: http://{settings.host}:{settings.port}/docs")
+    if os.path.exists(frontend_dist):
+        print(f"🎨 Frontend available at: http://{settings.host}:{settings.port}")
+    
+    yield
+    
+    # Shutdown
+    print("👋 LLM Code Analyser shutting down...")
 
 # Create FastAPI application
 app = FastAPI(
@@ -22,7 +53,8 @@ app = FastAPI(
     description="AI-powered code security analysis tool",
     version="1.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    lifespan=lifespan
 )
 
 # Add session middleware for OAuth (must be before CORS)
@@ -83,30 +115,7 @@ else:
         }
 
 
-@app.on_event("startup")
-async def startup_event():
-    """Initialize services on startup."""
-    print(f"🚀 LLM Code Analyser starting...")
-    print(f"📊 Mode: {settings.llm_mode}")
-    if settings.llm_mode == "openai":
-        print(f"🤖 Model: {settings.openai_model}")
-    elif settings.llm_mode == "gemini":
-        print(f"🤖 Model: {settings.gemini_model}")
-    else:
-        print(f"🤖 Model: {settings.ollama_model}")
-    
-    # Auth status
-    if settings.google_client_id and settings.google_client_secret:
-        print(f"🔐 Google OAuth: Configured")
-    else:
-        print(f"⚠️  Google OAuth: Not configured (set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET)")
-    
-    print(f"📖 API docs available at: http://{settings.host}:{settings.port}/docs")
-    if os.path.exists(frontend_dist):
-        print(f"🌐 Frontend available at: http://{settings.host}:{settings.port}/")
-    else:
-        print(f"⚠️  Frontend not built. Run 'cd frontend && npm run build'")
-
+# Startup logic moved to lifespan context manager above
 
 if __name__ == "__main__":
     import uvicorn
