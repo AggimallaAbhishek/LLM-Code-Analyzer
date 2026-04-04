@@ -10,7 +10,7 @@ export PORT=8000
 
 echo "🌐 Starting SecureCodeAI - ONLINE MODE (Gemini)"
 echo "📍 URL: http://localhost:8000"
-echo "🤖 Model: gemini-1.5-flash"
+echo "🤖 Model: gemini-2.0-flash"
 echo ""
 
 python -m backend.app
