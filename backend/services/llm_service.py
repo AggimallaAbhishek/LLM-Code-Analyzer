@@ -1,6 +1,6 @@
 """
-LLM Service for interacting with OpenAI and Ollama.
-Provides unified interface for both online and offline LLM modes.
+LLM Service for interacting with OpenAI, Gemini, and Ollama.
+Provides unified interface for multiple LLM providers.
 """
 
 import json
@@ -12,17 +12,24 @@ from backend.config import settings
 
 
 class LLMService:
-    """Service for LLM interactions supporting both OpenAI and Ollama."""
+    """Service for LLM interactions supporting OpenAI, Gemini, and Ollama."""
     
     def __init__(self):
         self.mode = settings.llm_mode
         
-        if self.mode == "online":
+        if self.mode == "openai":
             if not settings.openai_api_key:
-                raise ValueError("OPENAI_API_KEY is required for online mode")
+                raise ValueError("OPENAI_API_KEY is required for OpenAI mode")
             self.client = OpenAI(api_key=settings.openai_api_key)
             self.model = settings.openai_model
-        else:
+        elif self.mode == "gemini":
+            if not settings.gemini_api_key:
+                raise ValueError("GEMINI_API_KEY is required for Gemini mode")
+            import google.generativeai as genai
+            genai.configure(api_key=settings.gemini_api_key)
+            self.genai = genai
+            self.model = settings.gemini_model
+        else:  # ollama
             self.ollama_url = settings.ollama_base_url
             self.model = settings.ollama_model
     
@@ -36,8 +43,10 @@ class LLMService:
         Returns:
             Parsed JSON response from LLM
         """
-        if self.mode == "online":
+        if self.mode == "openai":
             return await self._analyze_openai(prompt)
+        elif self.mode == "gemini":
+            return await self._analyze_gemini(prompt)
         else:
             return await self._analyze_ollama(prompt)
     
@@ -69,6 +78,30 @@ class LLMService:
         except Exception as e:
             raise LLMError(f"Unexpected error during OpenAI analysis: {str(e)}")
     
+    async def _analyze_gemini(self, prompt: str) -> dict:
+        """Analyze using Google Gemini API."""
+        try:
+            model = self.genai.GenerativeModel(
+                self.model,
+                generation_config={
+                    "temperature": 0.1,
+                    "max_output_tokens": 4096,
+                    "response_mime_type": "application/json"
+                }
+            )
+            
+            full_prompt = f"""You are a security expert analyzing code for vulnerabilities. 
+Always respond with valid JSON only.
+
+{prompt}"""
+            
+            response = model.generate_content(full_prompt)
+            content = response.text
+            return self._parse_response(content)
+            
+        except Exception as e:
+            raise LLMError(f"Gemini API error: {str(e)}")
+    
     async def _analyze_ollama(self, prompt: str) -> dict:
         """Analyze using Ollama local model."""
         try:
@@ -98,12 +131,12 @@ class LLMService:
     def _parse_response(self, content: str) -> dict:
         """Parse LLM response into structured dict."""
         try:
-            # Clean up response if needed
             content = content.strip()
             
             # Handle potential markdown code blocks
             if content.startswith("```"):
                 lines = content.split("\n")
+                # Remove first line (```json) and last line (```)
                 content = "\n".join(lines[1:-1])
             
             return json.loads(content)
@@ -112,15 +145,21 @@ class LLMService:
     
     def health_check(self) -> bool:
         """Check if the LLM service is available."""
-        if self.mode == "online":
+        if self.mode == "openai":
             try:
                 self.client.models.list()
                 return True
             except Exception:
                 return False
-        else:
+        elif self.mode == "gemini":
             try:
-                import httpx
+                # Simple check - list models
+                list(self.genai.list_models())
+                return True
+            except Exception:
+                return False
+        else:  # ollama
+            try:
                 response = httpx.get(f"{self.ollama_url}/api/tags", timeout=5)
                 return response.status_code == 200
             except Exception:

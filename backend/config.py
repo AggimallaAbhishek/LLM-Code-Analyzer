@@ -14,12 +14,16 @@ load_dotenv()
 class Settings(BaseModel):
     """Application settings."""
     
-    # LLM Mode
-    llm_mode: Literal["online", "offline"] = os.getenv("LLM_MODE", "online")
+    # LLM Mode: openai, gemini, or ollama
+    llm_mode: Literal["openai", "gemini", "ollama"] = os.getenv("LLM_MODE", "gemini")
     
     # OpenAI Configuration
     openai_api_key: str = os.getenv("OPENAI_API_KEY", "")
     openai_model: str = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+    
+    # Google Gemini Configuration
+    gemini_api_key: str = os.getenv("GEMINI_API_KEY", "")
+    gemini_model: str = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
     
     # Ollama Configuration (for offline mode)
     ollama_base_url: str = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
