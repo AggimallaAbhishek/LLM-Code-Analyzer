@@ -9,7 +9,7 @@ export default defineConfig({
     proxy: {
       '/api': {
         // Use 8000 for online mode (Gemini), 8001 for offline mode (Ollama)
-        target: process.env.VITE_API_URL || 'http://localhost:8001',
+        target: process.env.VITE_API_URL || 'http://localhost:8000',
         changeOrigin: true,
       },
     },
