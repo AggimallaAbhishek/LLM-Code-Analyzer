@@ -41,6 +41,7 @@ const Dashboard = () => {
   const [code, setCode] = useState('')
   const [language, setLanguage] = useState('python')
   const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [analysisStage, setAnalysisStage] = useState('')
   const [results, setResults] = useState(null)
   const [error, setError] = useState(null)
 
@@ -53,8 +54,14 @@ const Dashboard = () => {
     setIsAnalyzing(true)
     setError(null)
     setResults(null)
+    setAnalysisStage('Running static analysis...')
 
     try {
+      // Simulate stage updates
+      setTimeout(() => setAnalysisStage('Scanning for vulnerabilities...'), 500)
+      setTimeout(() => setAnalysisStage('AI analyzing code patterns...'), 1500)
+      setTimeout(() => setAnalysisStage('Generating recommendations...'), 3000)
+      
       const response = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -76,6 +83,7 @@ const Dashboard = () => {
       setError(err.message)
     } finally {
       setIsAnalyzing(false)
+      setAnalysisStage('')
     }
   }
 
@@ -281,6 +289,21 @@ const Dashboard = () => {
               animate={{ top: ['0%', '100%'] }}
               transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
             />
+            {/* Analysis stage indicator */}
+            <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 pointer-events-auto">
+              <motion.div 
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                className="glass px-6 py-3 rounded-full border border-cyan-500/30 flex items-center gap-3"
+              >
+                <motion.div 
+                  className="w-2 h-2 rounded-full bg-cyan-400"
+                  animate={{ scale: [1, 1.5, 1], opacity: [1, 0.5, 1] }}
+                  transition={{ duration: 1, repeat: Infinity }}
+                />
+                <span className="text-cyan-400 text-sm font-medium">{analysisStage}</span>
+              </motion.div>
+            </div>
           </motion.div>
         )}
       </main>
