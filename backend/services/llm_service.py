@@ -104,26 +104,42 @@ You must respond with valid JSON only - no markdown, no code blocks, just pure J
     async def _analyze_ollama(self, prompt: str) -> dict:
         """Analyze using Ollama local model."""
         try:
-            async with httpx.AsyncClient(timeout=settings.analysis_timeout) as client:
+            # Increase timeout for local models
+            timeout = httpx.Timeout(300.0, connect=30.0)
+            
+            async with httpx.AsyncClient(timeout=timeout) as client:
                 response = await client.post(
                     f"{self.ollama_url}/api/generate",
                     json={
                         "model": self.model,
-                        "prompt": prompt,
+                        "prompt": f"""You are a security expert. Analyze this code and respond with ONLY valid JSON.
+
+{prompt}
+
+IMPORTANT: Your response must be ONLY the JSON object, starting with {{ and ending with }}. No other text.""",
                         "stream": False,
-                        "format": "json"
+                        "options": {
+                            "temperature": 0.1,
+                            "num_predict": 4096
+                        }
                     }
                 )
                 response.raise_for_status()
                 
                 result = response.json()
                 content = result.get("response", "")
+                
+                if not content.strip():
+                    raise LLMError("Ollama returned empty response")
+                
                 return self._parse_response(content)
                 
         except httpx.TimeoutException:
-            raise LLMError("Ollama request timed out. The model may be loading or the code is too complex.")
+            raise LLMError("Ollama request timed out. Try with smaller code or wait for model to load.")
         except httpx.HTTPError as e:
             raise LLMError(f"Ollama API error: {str(e)}")
+        except LLMError:
+            raise
         except Exception as e:
             raise LLMError(f"Unexpected error during Ollama analysis: {str(e)}")
     
@@ -137,6 +153,13 @@ You must respond with valid JSON only - no markdown, no code blocks, just pure J
                 lines = content.split("\n")
                 # Remove first line (```json) and last line (```)
                 content = "\n".join(lines[1:-1])
+            
+            # Try to find JSON object in the response
+            start_idx = content.find('{')
+            end_idx = content.rfind('}')
+            
+            if start_idx != -1 and end_idx != -1:
+                content = content[start_idx:end_idx + 1]
             
             return json.loads(content)
         except json.JSONDecodeError as e:
