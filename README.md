@@ -8,28 +8,37 @@ AI-powered code security analysis tool that combines Large Language Models with 
 
 ## ✨ Features
 
+### Core Analysis
 - **🤖 AI-Driven Analysis**: Uses Google Gemini or local Ollama models for intelligent vulnerability detection
 - **📊 Static Analysis**: Pattern-based detection for 20+ common security issues
 - **🔄 Hybrid Intelligence**: Combines LLM insights with rule-based verification
-- **🌐 Multi-Language Support**: Python, JavaScript, Java, C/C++, PHP
-- **💻 Modern UI**: Beautiful React-based interface with cybersecurity aesthetic
-- **📱 Responsive Design**: Works on desktop and mobile
+- **🌐 Multi-Language Support**: Python, JavaScript, Java, C/C++, PHP, Go, Rust
 - **🔒 Offline Mode**: Privacy-friendly local analysis with Ollama
 - **⚡ Fast Results**: Static analysis fallback when LLM is slow
+
+### Advanced Features
+- **🎨 Syntax Highlighting**: Color-coded code with Prism.js
+- **📍 Line Highlighting**: Visual indicators for vulnerable lines (severity-based colors)
+- **📁 Multi-File Upload**: Analyze entire folders or ZIP archives at once
+- **📥 Export Reports**: Download analysis as JSON, Markdown, or PDF
+- **📋 Copy Fixed Code**: One-click copy for suggested code fixes
+- **💻 Modern UI**: Beautiful React interface with cybersecurity aesthetic
 
 ## 🖼️ Screenshots
 
 ### Dashboard
-- Clean code editor with line numbers
+- Clean code editor with syntax highlighting and line numbers
 - Real-time vulnerability detection
 - Risk score visualization
 - Expandable vulnerability cards with fix suggestions
+- Multi-file upload with drag-and-drop
 
 ### Analysis Results
 - Attack surfaces identification
 - Trust boundary mapping
 - Severity-based categorization (Critical/High/Medium/Low)
 - One-click access to fixed code
+- Export to JSON/Markdown/PDF
 
 ## 🚀 Quick Start
 
