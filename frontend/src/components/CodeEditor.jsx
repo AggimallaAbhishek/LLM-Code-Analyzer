@@ -15,6 +15,7 @@ const CodeEditor = ({ value, onChange, language = 'python', readOnly = false, hi
   const textareaRef = useRef(null)
   const lineNumbersRef = useRef(null)
   const highlightRef = useRef(null)
+  const vulnHighlightRef = useRef(null)
   
   const lines = useMemo(() => (value || '').split('\n'), [value])
   const lineCount = useMemo(() => Math.max(lines.length, 20), [lines])
@@ -60,12 +61,16 @@ const CodeEditor = ({ value, onChange, language = 'python', readOnly = false, hi
   }
 
   const handleScroll = (e) => {
+    const scrollTop = e.target.scrollTop
     if (lineNumbersRef.current) {
-      lineNumbersRef.current.scrollTop = e.target.scrollTop
+      lineNumbersRef.current.scrollTop = scrollTop
     }
     if (highlightRef.current) {
-      highlightRef.current.scrollTop = e.target.scrollTop
+      highlightRef.current.scrollTop = scrollTop
       highlightRef.current.scrollLeft = e.target.scrollLeft
+    }
+    if (vulnHighlightRef.current) {
+      vulnHighlightRef.current.scrollTop = scrollTop
     }
   }
 
@@ -163,24 +168,30 @@ const CodeEditor = ({ value, onChange, language = 'python', readOnly = false, hi
             style={{ tabSize: 2, caretColor: '#22d3ee' }}
           />
           
-          {/* Vulnerability line highlights */}
-          <div className="absolute inset-0 pointer-events-none p-4 overflow-hidden">
-            {lines.map((_, i) => {
-              const severity = getLineSeverity(i + 1)
-              if (!severity) return null
-              return (
-                <div
-                  key={i}
-                  className={`h-6 -mx-4 px-4 ${
-                    severity === 'critical' ? 'bg-red-500/20 border-l-2 border-red-500' :
-                    severity === 'high' ? 'bg-orange-500/15 border-l-2 border-orange-500' :
-                    severity === 'medium' ? 'bg-yellow-500/10 border-l-2 border-yellow-500' :
-                    'bg-blue-500/10 border-l-2 border-blue-500'
-                  }`}
-                  style={{ marginTop: i === 0 ? 0 : undefined }}
-                />
-              )
-            })}
+          {/* Vulnerability line highlights - positioned absolutely based on line number */}
+          <div 
+            ref={vulnHighlightRef}
+            className="absolute inset-0 pointer-events-none overflow-hidden"
+            style={{ padding: '16px 0' }}
+          >
+            <div style={{ position: 'relative', minHeight: `${lines.length * 24}px` }}>
+              {highlightedLines.map((item, idx) => {
+                const lineIndex = item.line - 1
+                if (lineIndex < 0 || lineIndex >= lines.length) return null
+                return (
+                  <div
+                    key={`highlight-${item.line}-${idx}`}
+                    className={`absolute left-0 right-0 h-6 ${
+                      item.severity === 'critical' ? 'bg-red-500/25 border-l-4 border-red-500' :
+                      item.severity === 'high' ? 'bg-orange-500/20 border-l-4 border-orange-500' :
+                      item.severity === 'medium' ? 'bg-yellow-500/15 border-l-4 border-yellow-500' :
+                      'bg-blue-500/15 border-l-4 border-blue-500'
+                    }`}
+                    style={{ top: `${lineIndex * 24}px` }}
+                  />
+                )
+              })}
+            </div>
           </div>
         </div>
       </div>

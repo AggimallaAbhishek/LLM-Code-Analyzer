@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Shield, Play, Trash2, FileCode, Download, Upload, Zap, FileJson, FileText, File, FolderOpen } from 'lucide-react'
 import { Link } from 'react-router-dom'
@@ -209,28 +209,67 @@ const Dashboard = () => {
   }
 
   // Export as PDF
-  const exportPDF = async () => {
+  const exportPDF = useCallback(async () => {
     const data = mode === 'multi' ? multiFileResults : results
     if (!data) return
+    
+    setShowExportMenu(false)
+    
     try {
+      // Dynamic import for code splitting
       const html2pdf = (await import('html2pdf.js')).default
-      const content = mode === 'multi' 
-        ? generateMultiFileHTMLReport(multiFileResults)
-        : generateHTMLReport(results, code)
-      const container = document.createElement('div')
-      container.innerHTML = content
-      container.style.padding = '20px'
-      container.style.background = 'white'
-      container.style.color = 'black'
-      document.body.appendChild(container)
       
-      await html2pdf().from(container).save('security-report.pdf')
-      document.body.removeChild(container)
+      const content = mode === 'multi' 
+        ? generateMultiFileHTMLReport(data)
+        : generateHTMLReport(data, code)
+      
+      // Create a wrapper element
+      const element = document.createElement('div')
+      element.innerHTML = content
+      
+      // Apply styles inline
+      element.style.width = '210mm'
+      element.style.padding = '15mm'
+      element.style.background = 'white'
+      element.style.color = 'black'
+      element.style.fontFamily = 'Arial, Helvetica, sans-serif'
+      element.style.fontSize = '12px'
+      element.style.lineHeight = '1.5'
+      
+      // Append temporarily (off-screen)
+      element.style.position = 'fixed'
+      element.style.left = '-10000px'
+      element.style.top = '0'
+      document.body.appendChild(element)
+      
+      // Generate PDF with options
+      const opt = {
+        margin: [10, 10, 10, 10],
+        filename: 'security-report.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { 
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          letterRendering: true
+        },
+        jsPDF: { 
+          unit: 'mm', 
+          format: 'a4', 
+          orientation: 'portrait' 
+        }
+      }
+      
+      await html2pdf().set(opt).from(element).save()
+      
+      // Cleanup
+      document.body.removeChild(element)
+      
     } catch (err) {
       console.error('PDF export failed:', err)
+      alert('PDF export failed: ' + err.message)
     }
-    setShowExportMenu(false)
-  }
+  }, [mode, multiFileResults, results, code])
 
   const downloadFile = (content, filename, type) => {
     const blob = new Blob([content], { type })
@@ -554,12 +593,12 @@ const Dashboard = () => {
                           Export
                         </motion.button>
                         
-                        {/* Export Dropdown Menu */}
+                        {/* Export Dropdown Menu - opens upward to avoid clipping */}
                         {showExportMenu && (
                           <motion.div
-                            initial={{ opacity: 0, y: -10 }}
+                            initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className="absolute right-0 mt-2 w-48 glass rounded-xl border border-white/10 py-2 z-50"
+                            className="absolute right-0 bottom-full mb-2 w-48 glass rounded-xl border border-white/10 py-2 z-[100] shadow-xl"
                           >
                             <button
                               onClick={exportJSON}
@@ -638,12 +677,12 @@ const Dashboard = () => {
                           Export
                         </motion.button>
                         
-                        {/* Export Dropdown Menu */}
+                        {/* Export Dropdown Menu - opens upward to avoid clipping */}
                         {showExportMenu && (
                           <motion.div
-                            initial={{ opacity: 0, y: -10 }}
+                            initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className="absolute right-0 mt-2 w-48 glass rounded-xl border border-white/10 py-2 z-50"
+                            className="absolute right-0 bottom-full mb-2 w-48 glass rounded-xl border border-white/10 py-2 z-[100] shadow-xl"
                           >
                             <button
                               onClick={exportJSON}
