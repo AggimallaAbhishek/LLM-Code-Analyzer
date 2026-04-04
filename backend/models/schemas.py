@@ -58,3 +58,26 @@ class HealthResponse(BaseModel):
     status: str
     llm_mode: str
     version: str = "1.0.0"
+
+
+class FileAnalysisResult(BaseModel):
+    """Result for a single file in multi-file analysis."""
+    filename: str = Field(..., description="Name of the analyzed file")
+    filepath: str = Field(..., description="Path of the file")
+    analysis: AnalysisResponse = Field(..., description="Analysis result for this file")
+
+
+class MultiFileAnalysisRequest(BaseModel):
+    """Request schema for multi-file analysis."""
+    files: List[dict] = Field(..., description="List of files with 'filename', 'content', and optional 'language'")
+
+
+class MultiFileAnalysisResponse(BaseModel):
+    """Response schema for multi-file analysis results."""
+    success: bool = Field(..., description="Whether analysis completed successfully")
+    total_files: int = Field(..., description="Total number of files analyzed")
+    total_vulnerabilities: int = Field(..., description="Total vulnerabilities found across all files")
+    overall_risk_score: int = Field(..., ge=0, le=100, description="Overall risk score (0-100)")
+    summary: str = Field(..., description="Summary of multi-file analysis")
+    results: List[FileAnalysisResult] = Field(default_factory=list, description="Results per file")
+    error: Optional[str] = Field(default=None, description="Error message if analysis failed")

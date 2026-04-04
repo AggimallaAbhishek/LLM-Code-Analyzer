@@ -1,10 +1,21 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { AlertTriangle, Shield, GitBranch, CheckCircle, ChevronDown, ChevronUp } from 'lucide-react'
+import { AlertTriangle, Shield, GitBranch, CheckCircle, ChevronDown, ChevronUp, Copy, Check } from 'lucide-react'
 import { useState } from 'react'
 
 const ResultsPanel = ({ results, isLoading }) => {
   const [expandedVuln, setExpandedVuln] = useState(null)
   const [activeTab, setActiveTab] = useState('vulnerabilities')
+  const [copiedIdx, setCopiedIdx] = useState(null)
+
+  const copyToClipboard = async (text, idx) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopiedIdx(idx)
+      setTimeout(() => setCopiedIdx(null), 2000)
+    } catch (err) {
+      console.error('Failed to copy:', err)
+    }
+  }
 
   if (isLoading) {
     return (
@@ -193,7 +204,25 @@ const ResultsPanel = ({ results, isLoading }) => {
 
                               {vuln.fixed_code && (
                                 <div>
-                                  <p className="text-sm text-gray-500 mb-2">Fixed Code:</p>
+                                  <div className="flex items-center justify-between mb-2">
+                                    <p className="text-sm text-gray-500">Fixed Code:</p>
+                                    <button
+                                      onClick={() => copyToClipboard(vuln.fixed_code, `fixed-${idx}`)}
+                                      className="flex items-center gap-1.5 px-2 py-1 text-xs bg-green-500/20 hover:bg-green-500/30 text-green-400 rounded transition-colors"
+                                    >
+                                      {copiedIdx === `fixed-${idx}` ? (
+                                        <>
+                                          <Check className="w-3 h-3" />
+                                          Copied!
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Copy className="w-3 h-3" />
+                                          Copy Fix
+                                        </>
+                                      )}
+                                    </button>
+                                  </div>
                                   <pre className="bg-black/30 p-3 rounded-lg text-green-300 text-sm font-mono overflow-x-auto">
                                     {vuln.fixed_code}
                                   </pre>

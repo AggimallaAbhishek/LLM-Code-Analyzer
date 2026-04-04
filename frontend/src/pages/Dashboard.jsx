@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { motion } from 'framer-motion'
-import { Shield, Play, Trash2, FileCode, Download, Upload, Zap } from 'lucide-react'
+import { Shield, Play, Trash2, FileCode, Download, Upload, Zap, FileJson, FileText, File } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import CodeEditor from '../components/CodeEditor'
 import ResultsPanel from '../components/ResultsPanel'
@@ -44,6 +44,29 @@ const Dashboard = () => {
   const [analysisStage, setAnalysisStage] = useState('')
   const [results, setResults] = useState(null)
   const [error, setError] = useState(null)
+  const [showExportMenu, setShowExportMenu] = useState(false)
+
+  // Extract highlighted lines from vulnerabilities
+  const highlightedLines = useMemo(() => {
+    if (!results?.vulnerabilities) return []
+    const lines = []
+    results.vulnerabilities.forEach(vuln => {
+      if (vuln.line_numbers) {
+        vuln.line_numbers.forEach(lineNum => {
+          lines.push({ line: lineNum, severity: vuln.severity })
+        })
+      }
+    })
+    // Also add static findings
+    if (results.static_findings) {
+      results.static_findings.forEach(finding => {
+        if (finding.line && !lines.find(l => l.line === finding.line)) {
+          lines.push({ line: finding.line, severity: finding.severity })
+        }
+      })
+    }
+    return lines
+  }, [results])
 
   const analyzeCode = async () => {
     if (!code.trim()) {
@@ -57,7 +80,6 @@ const Dashboard = () => {
     setAnalysisStage('Running static analysis...')
 
     try {
-      // Simulate stage updates
       setTimeout(() => setAnalysisStage('Scanning for vulnerabilities...'), 500)
       setTimeout(() => setAnalysisStage('AI analyzing code patterns...'), 1500)
       setTimeout(() => setAnalysisStage('Generating recommendations...'), 3000)
@@ -100,16 +122,143 @@ const Dashboard = () => {
     setError(null)
   }
 
-  const downloadReport = () => {
+  // Export as JSON
+  const exportJSON = () => {
     if (!results) return
     const report = JSON.stringify(results, null, 2)
-    const blob = new Blob([report], { type: 'application/json' })
+    downloadFile(report, 'security-report.json', 'application/json')
+    setShowExportMenu(false)
+  }
+
+  // Export as Markdown
+  const exportMarkdown = () => {
+    if (!results) return
+    const md = generateMarkdownReport(results, code)
+    downloadFile(md, 'security-report.md', 'text/markdown')
+    setShowExportMenu(false)
+  }
+
+  // Export as PDF
+  const exportPDF = async () => {
+    if (!results) return
+    try {
+      const html2pdf = (await import('html2pdf.js')).default
+      const content = generateHTMLReport(results, code)
+      const container = document.createElement('div')
+      container.innerHTML = content
+      container.style.padding = '20px'
+      container.style.background = 'white'
+      container.style.color = 'black'
+      document.body.appendChild(container)
+      
+      await html2pdf().from(container).save('security-report.pdf')
+      document.body.removeChild(container)
+    } catch (err) {
+      console.error('PDF export failed:', err)
+    }
+    setShowExportMenu(false)
+  }
+
+  const downloadFile = (content, filename, type) => {
+    const blob = new Blob([content], { type })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = 'security-report.json'
+    a.download = filename
     a.click()
     URL.revokeObjectURL(url)
+  }
+
+  const generateMarkdownReport = (data, sourceCode) => {
+    let md = `# Security Analysis Report\n\n`
+    md += `**Generated:** ${new Date().toLocaleString()}\n\n`
+    md += `## Summary\n\n`
+    md += `- **Language:** ${data.language}\n`
+    md += `- **Risk Score:** ${data.risk_score}/100\n`
+    md += `- **Summary:** ${data.summary}\n\n`
+
+    if (data.vulnerabilities?.length > 0) {
+      md += `## Vulnerabilities (${data.vulnerabilities.length})\n\n`
+      data.vulnerabilities.forEach((vuln, i) => {
+        md += `### ${i + 1}. ${vuln.type}\n\n`
+        md += `- **Severity:** ${vuln.severity?.toUpperCase()}\n`
+        md += `- **Line(s):** ${vuln.line_numbers?.join(', ') || 'N/A'}\n`
+        md += `- **Description:** ${vuln.description}\n\n`
+        if (vuln.vulnerable_code) {
+          md += `**Vulnerable Code:**\n\`\`\`\n${vuln.vulnerable_code}\n\`\`\`\n\n`
+        }
+        if (vuln.fix_suggestion) {
+          md += `**Fix Suggestion:** ${vuln.fix_suggestion}\n\n`
+        }
+        if (vuln.fixed_code) {
+          md += `**Fixed Code:**\n\`\`\`\n${vuln.fixed_code}\n\`\`\`\n\n`
+        }
+      })
+    }
+
+    if (data.attack_surfaces?.length > 0) {
+      md += `## Attack Surfaces\n\n`
+      data.attack_surfaces.forEach(surface => {
+        md += `- **${surface.name}** (${surface.risk_level}): ${surface.description}\n`
+      })
+      md += `\n`
+    }
+
+    if (data.recommendations?.length > 0) {
+      md += `## Recommendations\n\n`
+      data.recommendations.forEach(rec => {
+        md += `- ${rec}\n`
+      })
+    }
+
+    md += `\n---\n*Generated by LLM Code Analyser*\n`
+    return md
+  }
+
+  const generateHTMLReport = (data, sourceCode) => {
+    return `
+      <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto;">
+        <h1 style="color: #1a1a2e; border-bottom: 2px solid #0ea5e9;">Security Analysis Report</h1>
+        <p><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
+        
+        <h2>Summary</h2>
+        <ul>
+          <li><strong>Language:</strong> ${data.language}</li>
+          <li><strong>Risk Score:</strong> <span style="color: ${data.risk_score > 70 ? 'red' : data.risk_score > 40 ? 'orange' : 'green'}">${data.risk_score}/100</span></li>
+          <li><strong>Summary:</strong> ${data.summary}</li>
+        </ul>
+        
+        ${data.vulnerabilities?.length > 0 ? `
+          <h2>Vulnerabilities (${data.vulnerabilities.length})</h2>
+          ${data.vulnerabilities.map((vuln, i) => `
+            <div style="background: #f5f5f5; padding: 15px; margin: 10px 0; border-left: 4px solid ${
+              vuln.severity === 'critical' ? '#ef4444' : 
+              vuln.severity === 'high' ? '#f97316' : 
+              vuln.severity === 'medium' ? '#eab308' : '#3b82f6'
+            };">
+              <h3>${i + 1}. ${vuln.type} <span style="color: ${
+                vuln.severity === 'critical' ? '#ef4444' : 
+                vuln.severity === 'high' ? '#f97316' : 
+                vuln.severity === 'medium' ? '#eab308' : '#3b82f6'
+              };">[${vuln.severity?.toUpperCase()}]</span></h3>
+              <p><strong>Line(s):</strong> ${vuln.line_numbers?.join(', ') || 'N/A'}</p>
+              <p>${vuln.description}</p>
+              ${vuln.fix_suggestion ? `<p><strong>Fix:</strong> ${vuln.fix_suggestion}</p>` : ''}
+            </div>
+          `).join('')}
+        ` : ''}
+        
+        ${data.recommendations?.length > 0 ? `
+          <h2>Recommendations</h2>
+          <ul>
+            ${data.recommendations.map(rec => `<li>${rec}</li>`).join('')}
+          </ul>
+        ` : ''}
+        
+        <hr>
+        <p style="color: #666; font-size: 12px;">Generated by LLM Code Analyser</p>
+      </div>
+    `
   }
 
   return (
@@ -199,6 +348,7 @@ const Dashboard = () => {
               value={code}
               onChange={setCode}
               language={language}
+              highlightedLines={highlightedLines}
             />
 
             {/* Action Buttons */}
@@ -214,15 +364,48 @@ const Dashboard = () => {
               </GlowButton>
 
               {results && (
-                <motion.button
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  onClick={downloadReport}
-                  className="px-4 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-colors flex items-center gap-2 text-gray-300"
-                >
-                  <Download className="w-5 h-5" />
-                  Export
-                </motion.button>
+                <div className="relative">
+                  <motion.button
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    onClick={() => setShowExportMenu(!showExportMenu)}
+                    className="px-4 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-colors flex items-center gap-2 text-gray-300"
+                  >
+                    <Download className="w-5 h-5" />
+                    Export
+                  </motion.button>
+                  
+                  {/* Export Dropdown Menu */}
+                  {showExportMenu && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="absolute right-0 mt-2 w-48 glass rounded-xl border border-white/10 py-2 z-50"
+                    >
+                      <button
+                        onClick={exportJSON}
+                        className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-white/10 flex items-center gap-2"
+                      >
+                        <FileJson className="w-4 h-4 text-yellow-400" />
+                        Export as JSON
+                      </button>
+                      <button
+                        onClick={exportMarkdown}
+                        className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-white/10 flex items-center gap-2"
+                      >
+                        <FileText className="w-4 h-4 text-blue-400" />
+                        Export as Markdown
+                      </button>
+                      <button
+                        onClick={exportPDF}
+                        className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-white/10 flex items-center gap-2"
+                      >
+                        <File className="w-4 h-4 text-red-400" />
+                        Export as PDF
+                      </button>
+                    </motion.div>
+                  )}
+                </div>
               )}
             </div>
 
