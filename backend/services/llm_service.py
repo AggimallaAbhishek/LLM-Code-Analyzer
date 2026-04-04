@@ -104,8 +104,8 @@ You must respond with valid JSON only - no markdown, no code blocks, just pure J
     async def _analyze_ollama(self, prompt: str) -> dict:
         """Analyze using Ollama local model."""
         try:
-            # Increase timeout for local models
-            timeout = httpx.Timeout(300.0, connect=30.0)
+            # Increase timeout for local models with large code
+            timeout = httpx.Timeout(600.0, connect=60.0)
             
             async with httpx.AsyncClient(timeout=timeout) as client:
                 response = await client.post(
@@ -116,11 +116,16 @@ You must respond with valid JSON only - no markdown, no code blocks, just pure J
 
 {prompt}
 
-IMPORTANT: Your response must be ONLY the JSON object, starting with {{ and ending with }}. No other text.""",
+CRITICAL RULES:
+1. Response must be ONLY valid JSON - no markdown, no extra text
+2. Keep descriptions SHORT (under 30 words each)
+3. List max 5 vulnerabilities, 3 attack surfaces, 3 trust boundaries
+4. Start with {{ and end with }}""",
                         "stream": False,
                         "options": {
                             "temperature": 0.1,
-                            "num_predict": 4096
+                            "num_predict": 16384,
+                            "num_ctx": 32768
                         }
                     }
                 )
