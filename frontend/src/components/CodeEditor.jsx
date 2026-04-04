@@ -1,13 +1,12 @@
-import { useState, useRef, useEffect } from 'react'
+import { useRef, useMemo } from 'react'
 import { motion } from 'framer-motion'
 
 const CodeEditor = ({ value, onChange, language = 'python', readOnly = false }) => {
   const textareaRef = useRef(null)
-  const [lineCount, setLineCount] = useState(1)
-
-  useEffect(() => {
+  
+  const lineCount = useMemo(() => {
     const lines = (value || '').split('\n').length
-    setLineCount(Math.max(lines, 20))
+    return Math.max(lines, 20)
   }, [value])
 
   const handleKeyDown = (e) => {

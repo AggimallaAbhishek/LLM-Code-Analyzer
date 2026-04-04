@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 
-const FeatureCard = ({ icon: Icon, title, description, color, delay = 0 }) => {
+// eslint-disable-next-line no-unused-vars
+const FeatureCard = ({ icon: IconComponent, title, description, color, delay = 0 }) => {
   const colorClasses = {
     cyan: {
       bg: 'from-cyan-500/20 to-cyan-500/5',
@@ -40,7 +41,7 @@ const FeatureCard = ({ icon: Icon, title, description, color, delay = 0 }) => {
       className={`group glass rounded-2xl p-6 border ${colors.border} ${colors.glow} transition-all duration-300 cursor-pointer`}
     >
       <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${colors.bg} flex items-center justify-center mb-4`}>
-        <Icon className={`w-7 h-7 ${colors.icon}`} />
+        <IconComponent className={`w-7 h-7 ${colors.icon}`} />
       </div>
       
       <h3 className="text-xl font-semibold text-white mb-2">

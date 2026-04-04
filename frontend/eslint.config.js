@@ -23,7 +23,12 @@ export default defineConfig([
       },
     },
     rules: {
-      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      // Allow uppercase vars (components), motion, Icon patterns used in JSX
+      'no-unused-vars': ['error', { 
+        varsIgnorePattern: '^[A-Z]|^motion$', 
+        argsIgnorePattern: '^_' 
+      }],
+      'react-hooks/exhaustive-deps': 'warn',
     },
   },
 ])

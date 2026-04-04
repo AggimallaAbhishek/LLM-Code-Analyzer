@@ -1,10 +1,10 @@
 import { motion } from 'framer-motion'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 
 const CodeAnimation = () => {
   const [currentLine, setCurrentLine] = useState(0)
   
-  const codeLines = [
+  const codeLines = useMemo(() => [
     'def process_user_input(data):',
     '    query = "SELECT * FROM users"',
     '    query += " WHERE id = " + data',
@@ -13,14 +13,14 @@ const CodeAnimation = () => {
     'def run_command(cmd):',
     '    os.system(cmd)  # Danger!',
     '    return result'
-  ]
+  ], [])
 
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentLine((prev) => (prev + 1) % codeLines.length)
     }, 800)
     return () => clearInterval(interval)
-  }, [])
+  }, [codeLines.length])
 
   return (
     <div className="relative w-full max-w-lg">
