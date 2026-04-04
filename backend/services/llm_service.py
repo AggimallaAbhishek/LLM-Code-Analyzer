@@ -86,12 +86,11 @@ class LLMService:
                 generation_config={
                     "temperature": 0.1,
                     "max_output_tokens": 4096,
-                    "response_mime_type": "application/json"
                 }
             )
             
             full_prompt = f"""You are a security expert analyzing code for vulnerabilities. 
-Always respond with valid JSON only.
+You must respond with valid JSON only - no markdown, no code blocks, just pure JSON.
 
 {prompt}"""
             
