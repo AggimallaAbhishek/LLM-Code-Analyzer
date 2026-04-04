@@ -5,13 +5,15 @@ A security-focused code analysis tool that combines LLM intelligence
 with static analysis to identify vulnerabilities and suggest fixes.
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
+from starlette.middleware.sessions import SessionMiddleware
 import os
 
 from backend.routes.analyze import router as analyze_router
+from backend.routes.auth import router as auth_router
 from backend.config import settings
 
 # Create FastAPI application
@@ -21,6 +23,16 @@ app = FastAPI(
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc"
+)
+
+# Add session middleware for OAuth (must be before CORS)
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=settings.secret_key,
+    session_cookie="llm_analyzer_session",
+    max_age=86400,  # 24 hours
+    same_site="lax",
+    https_only=False  # Set to True in production with HTTPS
 )
 
 # Configure CORS for frontend
@@ -34,6 +46,7 @@ app.add_middleware(
 
 # Include API routes
 app.include_router(analyze_router, prefix="/api", tags=["analysis"])
+app.include_router(auth_router, prefix="/api/auth", tags=["authentication"])
 
 # Check for built React frontend
 frontend_dist = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
@@ -81,6 +94,13 @@ async def startup_event():
         print(f"🤖 Model: {settings.gemini_model}")
     else:
         print(f"🤖 Model: {settings.ollama_model}")
+    
+    # Auth status
+    if settings.google_client_id and settings.google_client_secret:
+        print(f"🔐 Google OAuth: Configured")
+    else:
+        print(f"⚠️  Google OAuth: Not configured (set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET)")
+    
     print(f"📖 API docs available at: http://{settings.host}:{settings.port}/docs")
     if os.path.exists(frontend_dist):
         print(f"🌐 Frontend available at: http://{settings.host}:{settings.port}/")

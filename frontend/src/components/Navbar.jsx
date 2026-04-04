@@ -1,8 +1,13 @@
-import { motion } from 'framer-motion'
+import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Link } from 'react-router-dom'
-import { Shield, Zap } from 'lucide-react'
+import { Shield, Zap, LogOut, User, ChevronDown } from 'lucide-react'
+import { useAuth } from '../context/AuthContext'
 
 const Navbar = () => {
+  const { user, logout, isAuthenticated } = useAuth()
+  const [showUserMenu, setShowUserMenu] = useState(false)
+
   return (
     <motion.nav
       initial={{ y: -100, opacity: 0 }}
@@ -33,12 +38,64 @@ const Navbar = () => {
             >
               Analyzer
             </Link>
-            <Link
-              to="/dashboard"
-              className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-purple-500 rounded-lg font-medium hover:opacity-90 transition-opacity btn-ripple"
-            >
-              Get Started
-            </Link>
+            
+            {isAuthenticated && user ? (
+              <div className="relative">
+                <button
+                  onClick={() => setShowUserMenu(!showUserMenu)}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/10 transition-colors"
+                >
+                  {user.picture ? (
+                    <img 
+                      src={user.picture} 
+                      alt={user.name} 
+                      className="w-8 h-8 rounded-full border-2 border-cyan-400/50"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-purple-500 flex items-center justify-center">
+                      <User className="w-4 h-4 text-white" />
+                    </div>
+                  )}
+                  <span className="text-sm text-gray-300 hidden sm:block">
+                    {user.name?.split(' ')[0]}
+                  </span>
+                  <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showUserMenu ? 'rotate-180' : ''}`} />
+                </button>
+                
+                <AnimatePresence>
+                  {showUserMenu && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="absolute right-0 mt-2 w-56 glass rounded-xl border border-white/10 py-2 shadow-xl"
+                    >
+                      <div className="px-4 py-3 border-b border-white/10">
+                        <p className="text-sm font-medium text-white truncate">{user.name}</p>
+                        <p className="text-xs text-gray-400 truncate">{user.email}</p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setShowUserMenu(false)
+                          logout()
+                        }}
+                        className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-white/10 flex items-center gap-2"
+                      >
+                        <LogOut className="w-4 h-4 text-red-400" />
+                        Sign out
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            ) : (
+              <Link
+                to="/login"
+                className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-purple-500 rounded-lg font-medium hover:opacity-90 transition-opacity btn-ripple"
+              >
+                Sign In
+              </Link>
+            )}
           </div>
         </div>
       </div>

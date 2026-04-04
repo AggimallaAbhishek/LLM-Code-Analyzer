@@ -4,6 +4,7 @@ Loads settings from environment variables with sensible defaults.
 """
 
 import os
+import secrets
 from typing import Literal
 from dotenv import load_dotenv
 from pydantic import BaseModel
@@ -37,6 +38,14 @@ class Settings(BaseModel):
     # Analysis Configuration
     max_code_length: int = int(os.getenv("MAX_CODE_LENGTH", "50000"))
     analysis_timeout: int = int(os.getenv("ANALYSIS_TIMEOUT", "120"))
+    
+    # Google OAuth Configuration
+    google_client_id: str = os.getenv("GOOGLE_CLIENT_ID", "")
+    google_client_secret: str = os.getenv("GOOGLE_CLIENT_SECRET", "")
+    secret_key: str = os.getenv("SECRET_KEY", secrets.token_urlsafe(32))
+    
+    # Frontend URL for OAuth redirect
+    frontend_url: str = os.getenv("FRONTEND_URL", "http://localhost:8000")
 
 
 settings = Settings()
