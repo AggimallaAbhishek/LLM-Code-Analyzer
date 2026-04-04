@@ -16,7 +16,7 @@ from backend.config import settings
 
 # Create FastAPI application
 app = FastAPI(
-    title="LLM Code Analyzer",
+    title="SecureCodeAI",
     description="AI-powered code security analysis tool",
     version="1.0.0",
     docs_url="/docs",
@@ -35,34 +35,52 @@ app.add_middleware(
 # Include API routes
 app.include_router(analyze_router, prefix="/api", tags=["analysis"])
 
+# Check for built React frontend
+frontend_dist = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
+frontend_assets = os.path.join(frontend_dist, "assets")
 
-@app.get("/")
-async def root():
-    """Serve the frontend or return API info."""
-    frontend_path = os.path.join(os.path.dirname(__file__), "..", "frontend", "index.html")
-    if os.path.exists(frontend_path):
-        return FileResponse(frontend_path)
-    return {
-        "name": "LLM Code Analyzer API",
-        "version": "1.0.0",
-        "docs": "/docs",
-        "health": "/api/health"
-    }
+if os.path.exists(frontend_dist):
+    # Serve static assets from React build
+    if os.path.exists(frontend_assets):
+        app.mount("/assets", StaticFiles(directory=frontend_assets), name="assets")
+    
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        """Serve React SPA - all routes go to index.html"""
+        # Don't serve API routes or docs
+        if full_path.startswith("api/") or full_path in ["docs", "redoc", "openapi.json"]:
+            return None
+        
+        file_path = os.path.join(frontend_dist, full_path)
+        if os.path.exists(file_path) and os.path.isfile(file_path):
+            return FileResponse(file_path)
+        
+        # Fallback to index.html for SPA routing
+        return FileResponse(os.path.join(frontend_dist, "index.html"))
+else:
+    @app.get("/")
+    async def root():
+        """Return API info when frontend is not built."""
+        return {
+            "name": "SecureCodeAI API",
+            "version": "1.0.0",
+            "docs": "/docs",
+            "health": "/api/health",
+            "note": "Run 'npm run build' in frontend/ to enable the web UI"
+        }
 
 
 @app.on_event("startup")
 async def startup_event():
     """Initialize services on startup."""
-    print(f"🚀 LLM Code Analyzer starting...")
+    print(f"🚀 SecureCodeAI starting...")
     print(f"📊 Mode: {settings.llm_mode}")
     print(f"🤖 Model: {settings.openai_model if settings.llm_mode == 'online' else settings.ollama_model}")
     print(f"📖 API docs available at: http://{settings.host}:{settings.port}/docs")
-
-
-# Mount static files if frontend exists
-frontend_static = os.path.join(os.path.dirname(__file__), "..", "frontend", "static")
-if os.path.exists(frontend_static):
-    app.mount("/static", StaticFiles(directory=frontend_static), name="static")
+    if os.path.exists(frontend_dist):
+        print(f"🌐 Frontend available at: http://{settings.host}:{settings.port}/")
+    else:
+        print(f"⚠️  Frontend not built. Run 'cd frontend && npm run build'")
 
 
 if __name__ == "__main__":
