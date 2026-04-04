@@ -78,8 +78,8 @@ const LandingPage = () => {
                 transition={{ delay: 0.3 }}
                 className="text-5xl lg:text-7xl font-bold mb-6"
               >
-                <span className="text-gradient">SecureCode</span>
-                <span className="text-white">AI</span>
+                <span className="text-gradient">LLM Code</span>
+                <span className="text-white">Analyser</span>
               </motion.h1>
 
               <motion.p
