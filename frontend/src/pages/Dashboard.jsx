@@ -1,10 +1,12 @@
 import { useState, useMemo } from 'react'
-import { motion } from 'framer-motion'
-import { Shield, Play, Trash2, FileCode, Download, Upload, Zap, FileJson, FileText, File } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Shield, Play, Trash2, FileCode, Download, Upload, Zap, FileJson, FileText, File, FolderOpen } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import CodeEditor from '../components/CodeEditor'
 import ResultsPanel from '../components/ResultsPanel'
 import GlowButton from '../components/GlowButton'
+import FileUpload from '../components/FileUpload'
+import MultiFileResults from '../components/MultiFileResults'
 
 const SAMPLE_CODE = `# Example vulnerable Python code
 import os
@@ -45,6 +47,11 @@ const Dashboard = () => {
   const [results, setResults] = useState(null)
   const [error, setError] = useState(null)
   const [showExportMenu, setShowExportMenu] = useState(false)
+  
+  // Multi-file mode
+  const [mode, setMode] = useState('single') // 'single' or 'multi'
+  const [uploadedFiles, setUploadedFiles] = useState([])
+  const [multiFileResults, setMultiFileResults] = useState(null)
 
   // Extract highlighted lines from vulnerabilities
   const highlightedLines = useMemo(() => {
@@ -114,12 +121,68 @@ const Dashboard = () => {
     setLanguage('python')
     setResults(null)
     setError(null)
+    setMode('single')
   }
 
   const clearAll = () => {
     setCode('')
     setResults(null)
     setError(null)
+    setUploadedFiles([])
+    setMultiFileResults(null)
+  }
+
+  // Handle file upload
+  const handleFilesSelected = (files) => {
+    setUploadedFiles(files)
+    setMultiFileResults(null)
+    setError(null)
+  }
+
+  // Analyze multiple files
+  const analyzeMultipleFiles = async () => {
+    if (uploadedFiles.length === 0) {
+      setError('Please upload files first')
+      return
+    }
+
+    setIsAnalyzing(true)
+    setError(null)
+    setMultiFileResults(null)
+    setAnalysisStage('Preparing files for analysis...')
+
+    try {
+      const filesPayload = uploadedFiles.map(f => ({
+        filename: f.filename,
+        content: f.content,
+        language: f.language
+      }))
+
+      setAnalysisStage(`Analyzing ${filesPayload.length} files...`)
+      
+      const response = await fetch('/api/analyze-multiple', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ files: filesPayload })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.detail || 'Multi-file analysis failed')
+      }
+
+      if (!data.success) {
+        throw new Error(data.error || 'Multi-file analysis failed')
+      }
+
+      setMultiFileResults(data)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setIsAnalyzing(false)
+      setAnalysisStage('')
+    }
   }
 
   // Export as JSON

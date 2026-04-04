@@ -2,7 +2,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { AlertTriangle, Shield, GitBranch, CheckCircle, ChevronDown, ChevronUp, Copy, Check } from 'lucide-react'
 import { useState } from 'react'
 
-const ResultsPanel = ({ results, isLoading }) => {
+const ResultsPanel = ({ results, isLoading, compact = false }) => {
   const [expandedVuln, setExpandedVuln] = useState(null)
   const [activeTab, setActiveTab] = useState('vulnerabilities')
   const [copiedIdx, setCopiedIdx] = useState(null)
@@ -59,6 +59,49 @@ const ResultsPanel = ({ results, isLoading }) => {
     if (score >= 50) return 'text-orange-400'
     if (score >= 25) return 'text-yellow-400'
     return 'text-green-400'
+  }
+
+  // Compact mode for multi-file view - show only vulnerabilities summary
+  if (compact) {
+    return (
+      <div className="space-y-2">
+        {results.vulnerabilities?.length === 0 ? (
+          <div className="flex items-center gap-2 text-green-400 text-sm">
+            <CheckCircle className="w-4 h-4" />
+            No vulnerabilities detected
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {results.vulnerabilities?.slice(0, 3).map((vuln, idx) => {
+              const colors = severityColors[vuln.severity] || severityColors.medium
+              return (
+                <div
+                  key={idx}
+                  className={`text-sm p-2 rounded border-l-2 ${colors.border} ${colors.bg}`}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className={`${colors.text} font-medium`}>{vuln.type}</span>
+                    {vuln.line_numbers?.length > 0 && (
+                      <span className="text-gray-500 text-xs">L{vuln.line_numbers[0]}</span>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+            {results.vulnerabilities?.length > 3 && (
+              <p className="text-xs text-gray-500">
+                +{results.vulnerabilities.length - 3} more issues
+              </p>
+            )}
+          </div>
+        )}
+        {results.recommendations?.length > 0 && (
+          <p className="text-xs text-gray-500 mt-2">
+            {results.recommendations.length} recommendation{results.recommendations.length > 1 ? 's' : ''}
+          </p>
+        )}
+      </div>
+    )
   }
 
   const tabs = [

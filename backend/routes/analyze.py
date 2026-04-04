@@ -3,7 +3,10 @@ API routes for code analysis endpoints.
 """
 
 from fastapi import APIRouter, HTTPException
-from backend.models.schemas import AnalysisRequest, AnalysisResponse, HealthResponse
+from backend.models.schemas import (
+    AnalysisRequest, AnalysisResponse, HealthResponse,
+    MultiFileAnalysisRequest, MultiFileAnalysisResponse, FileAnalysisResult
+)
 from backend.services.analyzer import get_analyzer_service
 from backend.services.llm_service import get_llm_service
 from backend.config import settings
@@ -69,3 +72,84 @@ async def get_config():
         "max_code_length": settings.max_code_length,
         "analysis_timeout": settings.analysis_timeout
     }
+
+
+@router.post("/analyze-multiple", response_model=MultiFileAnalysisResponse)
+async def analyze_multiple_files(request: MultiFileAnalysisRequest) -> MultiFileAnalysisResponse:
+    """
+    Analyze multiple files for security vulnerabilities.
+    
+    This endpoint analyzes a batch of files and returns aggregated results.
+    Each file is analyzed independently, and results are combined.
+    """
+    if not request.files:
+        raise HTTPException(status_code=400, detail="No files provided")
+    
+    if len(request.files) > 50:
+        raise HTTPException(status_code=400, detail="Maximum 50 files allowed per request")
+    
+    analyzer = get_analyzer_service()
+    results = []
+    total_vulnerabilities = 0
+    risk_scores = []
+    
+    for file_info in request.files:
+        filename = file_info.get('filename', 'unknown')
+        content = file_info.get('content', '')
+        language = file_info.get('language', 'auto')
+        
+        if not content.strip():
+            continue
+            
+        if len(content) > settings.max_code_length:
+            # Skip files that are too large but note them
+            results.append(FileAnalysisResult(
+                filename=filename,
+                filepath=filename,
+                analysis=AnalysisResponse(
+                    success=False,
+                    language=language,
+                    summary=f"File skipped: exceeds maximum length of {settings.max_code_length} characters",
+                    risk_score=0,
+                    error="File too large"
+                )
+            ))
+            continue
+        
+        try:
+            analysis = await analyzer.analyze_code(
+                code=content,
+                language=language,
+                context=f"File: {filename}"
+            )
+            results.append(FileAnalysisResult(
+                filename=filename,
+                filepath=filename,
+                analysis=analysis
+            ))
+            total_vulnerabilities += len(analysis.vulnerabilities)
+            if analysis.risk_score > 0:
+                risk_scores.append(analysis.risk_score)
+        except Exception as e:
+            results.append(FileAnalysisResult(
+                filename=filename,
+                filepath=filename,
+                analysis=AnalysisResponse(
+                    success=False,
+                    language=language,
+                    summary=f"Analysis failed: {str(e)}",
+                    risk_score=0,
+                    error=str(e)
+                )
+            ))
+    
+    overall_risk = int(sum(risk_scores) / len(risk_scores)) if risk_scores else 0
+    
+    return MultiFileAnalysisResponse(
+        success=True,
+        total_files=len(results),
+        total_vulnerabilities=total_vulnerabilities,
+        overall_risk_score=overall_risk,
+        summary=f"Analyzed {len(results)} files. Found {total_vulnerabilities} vulnerabilities. Overall risk: {overall_risk}/100.",
+        results=results
+    )
