@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 
 const CodeEditor = ({ value, onChange, language = 'python', readOnly = false }) => {
   const textareaRef = useRef(null)
+  const lineNumbersRef = useRef(null)
   
   const lineCount = useMemo(() => {
     const lines = (value || '').split('\n').length
@@ -19,6 +20,12 @@ const CodeEditor = ({ value, onChange, language = 'python', readOnly = false }) 
       setTimeout(() => {
         e.target.selectionStart = e.target.selectionEnd = start + 2
       }, 0)
+    }
+  }
+
+  const handleScroll = (e) => {
+    if (lineNumbersRef.current) {
+      lineNumbersRef.current.scrollTop = e.target.scrollTop
     }
   }
 
@@ -44,30 +51,35 @@ const CodeEditor = ({ value, onChange, language = 'python', readOnly = false }) 
       </div>
 
       {/* Editor Body */}
-      <div className="flex relative">
+      <div className="flex relative h-[500px]">
         {/* Line Numbers */}
-        <div className="flex flex-col items-end py-4 px-3 bg-black/20 text-gray-600 font-mono text-sm select-none border-r border-white/5">
+        <div 
+          ref={lineNumbersRef}
+          className="flex flex-col items-end py-4 px-3 bg-black/20 text-gray-600 font-mono text-sm select-none border-r border-white/5 overflow-hidden"
+        >
           {Array.from({ length: lineCount }, (_, i) => (
-            <div key={i + 1} className="leading-6 h-6">
+            <div key={i + 1} className="leading-6 h-6 flex-shrink-0">
               {i + 1}
             </div>
           ))}
         </div>
 
         {/* Code Area */}
-        <div className="flex-1 relative">
+        <div className="flex-1 relative overflow-hidden">
           <textarea
             ref={textareaRef}
             value={value}
             onChange={(e) => onChange(e.target.value)}
             onKeyDown={handleKeyDown}
+            onScroll={handleScroll}
             readOnly={readOnly}
             placeholder="// Paste your code here for security analysis..."
             spellCheck={false}
             className={`
-              w-full h-96 p-4 bg-transparent text-gray-200
+              w-full h-full p-4 bg-transparent text-gray-200
               font-mono text-sm leading-6 resize-none
               focus:outline-none placeholder:text-gray-600
+              overflow-auto
               ${readOnly ? 'cursor-default' : ''}
             `}
             style={{ tabSize: 2 }}
