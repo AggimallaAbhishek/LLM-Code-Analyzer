@@ -2,7 +2,7 @@
 
 AI-powered code security analysis tool that combines Large Language Models with static analysis to identify vulnerabilities, attack surfaces, and trust boundaries in source code.
 
-![LLM Code Analyser](https://img.shields.io/badge/version-1.0.0-blue.svg)
+![LLM Code Analyser](https://img.shields.io/badge/version-1.1.0-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.12+-green.svg)
 ![License](https://img.shields.io/badge/license-MIT-purple.svg)
 
@@ -17,6 +17,7 @@ AI-powered code security analysis tool that combines Large Language Models with 
 - **⚡ Fast Results**: Static analysis fallback when LLM is slow
 
 ### Advanced Features
+- **🔐 Google OAuth**: Secure authentication with Google Sign-In
 - **🎨 Syntax Highlighting**: Color-coded code with Prism.js
 - **📍 Line Highlighting**: Visual indicators for vulnerable lines (severity-based colors)
 - **📁 Multi-File Upload**: Analyze entire folders or ZIP archives at once
@@ -25,6 +26,11 @@ AI-powered code security analysis tool that combines Large Language Models with 
 - **💻 Modern UI**: Beautiful React interface with cybersecurity aesthetic
 
 ## 🖼️ Screenshots
+
+### Login Page
+- Secure Google OAuth authentication
+- Beautiful animated UI
+- Feature preview
 
 ### Dashboard
 - Clean code editor with syntax highlighting and line numbers
@@ -47,6 +53,7 @@ AI-powered code security analysis tool that combines Large Language Models with 
 - Python 3.12+
 - Node.js 18+ (for frontend development)
 - Google Gemini API key (for online mode) OR Ollama (for offline mode)
+- Google OAuth credentials (for authentication)
 
 ### Installation
 
@@ -81,7 +88,9 @@ AI-powered code security analysis tool that combines Large Language Models with 
    # Edit .env and add your API keys
    ```
 
-6. **Run the application**
+6. **Set up Google OAuth** (see [Authentication Setup](#-authentication-setup))
+
+7. **Run the application**
    
    **Online Mode (Gemini):**
    ```bash
@@ -93,9 +102,48 @@ AI-powered code security analysis tool that combines Large Language Models with 
    ./start_offline.sh
    ```
 
-7. **Open the UI**
+8. **Open the UI**
    - Online mode: http://localhost:8000
    - Offline mode: http://localhost:8001
+
+## 🔐 Authentication Setup
+
+This application uses Google OAuth for secure authentication. All pages require login.
+
+### Setting up Google OAuth
+
+1. **Go to Google Cloud Console**
+   - Visit [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+   - Create a new project or select an existing one
+
+2. **Create OAuth 2.0 Credentials**
+   - Click "Create Credentials" → "OAuth client ID"
+   - Select "Web application"
+   - Add Authorized redirect URIs:
+     - `http://localhost:8000/api/auth/callback` (for online mode)
+     - `http://localhost:8001/api/auth/callback` (for offline mode)
+     - Your production URL (if deploying)
+
+3. **Configure .env file**
+   ```env
+   # Google OAuth
+   GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+   GOOGLE_CLIENT_SECRET=your-client-secret
+   SECRET_KEY=generate-a-random-string
+   FRONTEND_URL=http://localhost:8000
+   ```
+
+4. **Generate SECRET_KEY**
+   ```bash
+   python3 -c "import secrets; print(secrets.token_urlsafe(32))"
+   ```
+
+### Authentication Flow
+1. User visits any page → Redirected to `/login`
+2. User clicks "Continue with Google" → Google OAuth flow
+3. After successful login → Redirected back with JWT token
+4. Token stored securely for API calls
+5. User profile shown in navbar with logout option
 
 ## 🔧 Configuration
 
@@ -111,6 +159,10 @@ AI-powered code security analysis tool that combines Large Language Models with 
 | `OLLAMA_BASE_URL` | Ollama server URL | `http://localhost:11434` |
 | `OLLAMA_MODEL` | Ollama model to use | `qwen3-coder:480b-cloud` |
 | `PORT` | Server port | `8000` |
+| `GOOGLE_CLIENT_ID` | Google OAuth Client ID | - |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth Client Secret | - |
+| `SECRET_KEY` | JWT signing key | auto-generated |
+| `FRONTEND_URL` | Frontend URL for OAuth redirect | `http://localhost:8000` |
 
 ### Startup Scripts
 
@@ -121,6 +173,20 @@ AI-powered code security analysis tool that combines Large Language Models with 
 
 ## 📖 API Usage
 
+### Authentication Required
+
+All API endpoints (except `/api/auth/*`) require authentication. Include the JWT token in the Authorization header:
+
+```bash
+curl -X POST http://localhost:8000/api/analyze \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "code": "query = \"SELECT * FROM users WHERE id = \" + user_id",
+    "language": "python"
+  }'
+```
+
 ### Analyze Code
 
 ```bash
@@ -129,6 +195,19 @@ curl -X POST http://localhost:8000/api/analyze \
   -d '{
     "code": "query = \"SELECT * FROM users WHERE id = \" + user_id",
     "language": "python"
+  }'
+```
+
+### Analyze Multiple Files
+
+```bash
+curl -X POST http://localhost:8000/api/analyze-multiple \
+  -H "Content-Type: application/json" \
+  -d '{
+    "files": [
+      {"filename": "main.py", "content": "import os\nos.system(cmd)", "language": "python"},
+      {"filename": "utils.py", "content": "eval(user_input)", "language": "python"}
+    ]
   }'
 ```
 
@@ -151,25 +230,9 @@ curl -X POST http://localhost:8000/api/analyze \
       "fixed_code": "cursor.execute(\"SELECT * FROM users WHERE id = ?\", (user_id,))"
     }
   ],
-  "attack_surfaces": [
-    {
-      "name": "User Input",
-      "type": "user_input",
-      "description": "Direct user input used in database query",
-      "risk_level": "high"
-    }
-  ],
-  "trust_boundaries": [
-    {
-      "name": "Input to Database",
-      "description": "Data crosses from untrusted user to trusted database",
-      "components": ["user_input", "sql_query"]
-    }
-  ],
-  "recommendations": [
-    "Use parameterized queries or prepared statements",
-    "Validate and sanitize all user inputs"
-  ]
+  "attack_surfaces": [...],
+  "trust_boundaries": [...],
+  "recommendations": [...]
 }
 ```
 
@@ -181,7 +244,8 @@ LLM-Code-Analyzer/
 │   ├── app.py                 # FastAPI application
 │   ├── config.py              # Configuration settings
 │   ├── routes/
-│   │   └── analyze.py         # API endpoints
+│   │   ├── analyze.py         # Analysis API endpoints
+│   │   └── auth.py            # Authentication endpoints
 │   ├── services/
 │   │   ├── analyzer.py        # Main analysis orchestration
 │   │   ├── llm_service.py     # LLM integration (Gemini/OpenAI/Ollama)
@@ -192,15 +256,20 @@ LLM-Code-Analyzer/
 │       └── prompt_engine.py   # Security analysis prompts
 ├── frontend/
 │   ├── src/
+│   │   ├── context/
+│   │   │   └── AuthContext.jsx    # Authentication state
 │   │   ├── pages/
-│   │   │   ├── LandingPage.jsx   # Hero, features, stats
-│   │   │   └── Dashboard.jsx     # Code editor & results
+│   │   │   ├── LoginPage.jsx      # Google OAuth login
+│   │   │   ├── LandingPage.jsx    # Hero, features, stats
+│   │   │   └── Dashboard.jsx      # Code editor & results
 │   │   └── components/
-│   │       ├── Navbar.jsx        # Navigation bar
-│   │       ├── CodeEditor.jsx    # Code input with line numbers
-│   │       ├── ResultsPanel.jsx  # Vulnerability display
-│   │       ├── GlowButton.jsx    # Animated buttons
-│   │       └── ...
+│   │       ├── Navbar.jsx         # Navigation with user menu
+│   │       ├── ProtectedRoute.jsx # Route protection
+│   │       ├── CodeEditor.jsx     # Syntax highlighted editor
+│   │       ├── ResultsPanel.jsx   # Vulnerability display
+│   │       ├── FileUpload.jsx     # Multi-file upload
+│   │       ├── MultiFileResults.jsx # Multi-file results
+│   │       └── GlowButton.jsx     # Animated buttons
 │   ├── index.html
 │   └── vite.config.js
 ├── data/                      # Sample vulnerable code
@@ -210,6 +279,21 @@ LLM-Code-Analyzer/
 ├── requirements.txt           # Python dependencies
 └── README.md
 ```
+
+## 📊 API Endpoints
+
+| Endpoint | Method | Auth | Description |
+|----------|--------|------|-------------|
+| `/api/auth/login` | GET | No | Initiate Google OAuth login |
+| `/api/auth/callback` | GET | No | OAuth callback handler |
+| `/api/auth/me` | GET | Yes | Get current user info |
+| `/api/auth/logout` | POST | Yes | Logout user |
+| `/api/auth/status` | GET | No | Check auth status |
+| `/api/analyze` | POST | Yes | Analyze single code snippet |
+| `/api/analyze-multiple` | POST | Yes | Analyze multiple files |
+| `/api/health` | GET | No | Check service health |
+| `/api/config` | GET | No | Get current configuration |
+| `/docs` | GET | No | Interactive OpenAPI documentation |
 
 ## 🔒 Detected Vulnerabilities
 
@@ -246,16 +330,6 @@ For privacy-sensitive environments, run analysis completely offline:
    ```bash
    ./start_offline.sh
    ```
-
-## 📊 API Endpoints
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/analyze` | POST | Analyze code for vulnerabilities |
-| `/api/health` | GET | Check service health and LLM status |
-| `/api/config` | GET | Get current configuration |
-| `/docs` | GET | Interactive OpenAPI documentation |
-| `/redoc` | GET | ReDoc API documentation |
 
 ## 🧪 Test Code Sample
 
@@ -313,16 +387,26 @@ source venv/bin/activate
 python -m backend.app  # Start with auto-reload
 ```
 
+## ✅ Completed Features
+
+- [x] AI-driven vulnerability detection
+- [x] Static analysis with 20+ patterns
+- [x] Google OAuth authentication
+- [x] Syntax highlighting (Prism.js)
+- [x] Line highlighting for vulnerabilities
+- [x] Export reports (JSON/Markdown/PDF)
+- [x] Multi-file upload (ZIP support)
+- [x] Copy fixed code button
+- [x] User profile & logout
+
 ## 🚧 Roadmap
 
-- [ ] Syntax highlighting in code editor
-- [ ] Line highlighting for vulnerable code
-- [ ] Export reports (PDF/JSON/Markdown)
-- [ ] Analysis history with localStorage
+- [ ] Analysis history with database storage
 - [ ] VS Code extension
 - [ ] GitHub integration
 - [ ] CI/CD pipeline integration
 - [ ] Custom vulnerability rules
+- [ ] Team collaboration features
 
 ## 🤝 Contributing
 
@@ -343,6 +427,8 @@ MIT License - see [LICENSE](LICENSE) file for details.
 - Built with [FastAPI](https://fastapi.tiangolo.com/)
 - Frontend powered by [React](https://react.dev/) + [Vite](https://vitejs.dev/) + [Tailwind CSS](https://tailwindcss.com/)
 - AI powered by [Google Gemini](https://ai.google.dev/) and [Ollama](https://ollama.ai/)
+- Authentication by [Authlib](https://authlib.org/) + Google OAuth
+- Syntax highlighting by [Prism.js](https://prismjs.com/)
 - Animations by [Framer Motion](https://www.framer.com/motion/)
 
 ---
