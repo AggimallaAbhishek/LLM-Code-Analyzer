@@ -16,7 +16,7 @@ from backend.config import settings
 
 # Create FastAPI application
 app = FastAPI(
-    title="SecureCodeAI",
+    title="LLM Code Analyser",
     description="AI-powered code security analysis tool",
     version="1.0.0",
     docs_url="/docs",
@@ -62,7 +62,7 @@ else:
     async def root():
         """Return API info when frontend is not built."""
         return {
-            "name": "SecureCodeAI API",
+            "name": "LLM Code Analyser API",
             "version": "1.0.0",
             "docs": "/docs",
             "health": "/api/health",
@@ -73,7 +73,7 @@ else:
 @app.on_event("startup")
 async def startup_event():
     """Initialize services on startup."""
-    print(f"🚀 SecureCodeAI starting...")
+    print(f"🚀 LLM Code Analyser starting...")
     print(f"📊 Mode: {settings.llm_mode}")
     if settings.llm_mode == "openai":
         print(f"🤖 Model: {settings.openai_model}")

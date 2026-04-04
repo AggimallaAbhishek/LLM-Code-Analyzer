@@ -17,7 +17,7 @@ const Navbar = () => {
               <Shield className="w-8 h-8 text-cyan-400" />
               <Zap className="w-4 h-4 text-purple-400 absolute -bottom-1 -right-1" />
             </div>
-            <span className="text-xl font-bold text-gradient">SecureCodeAI</span>
+            <span className="text-xl font-bold text-gradient">LLM Code Analyser</span>
           </Link>
 
           <div className="flex items-center gap-6">

@@ -259,10 +259,10 @@ const LandingPage = () => {
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <Shield className="w-6 h-6 text-cyan-400" />
-            <span className="font-semibold text-gradient">SecureCodeAI</span>
+            <span className="font-semibold text-gradient">LLM Code Analyser</span>
           </div>
           <p className="text-gray-500 text-sm">
-            © 2024 SecureCodeAI. Powered by LLM + Static Analysis.
+            © 2024 LLM Code Analyser. Powered by LLM + Static Analysis.
           </p>
         </div>
       </footer>

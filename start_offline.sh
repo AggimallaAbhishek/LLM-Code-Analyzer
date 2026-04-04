@@ -1,5 +1,5 @@
 #!/bin/bash
-# Start SecureCodeAI with Ollama (Offline Mode)
+# Start LLM Code Analyser with Ollama (Offline Mode)
 # Port: 8001
 
 cd "$(dirname "$0")"
@@ -7,11 +7,11 @@ source venv/bin/activate
 
 export LLM_MODE=ollama
 export PORT=8001
-export OLLAMA_MODEL=qwen2.5-coder:7b
+export OLLAMA_MODEL=qwen3-coder:480b-cloud
 
-echo "🔒 Starting SecureCodeAI - OFFLINE MODE (Ollama)"
+echo "🔒 Starting LLM Code Analyser - OFFLINE MODE (Ollama)"
 echo "📍 URL: http://localhost:8001"
-echo "🤖 Model: qwen2.5-coder:7b"
+echo "🤖 Model: qwen3-coder:480b-cloud"
 echo ""
 
 python -m backend.app
