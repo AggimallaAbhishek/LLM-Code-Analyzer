@@ -223,35 +223,31 @@ const Dashboard = () => {
         ? generateMultiFileHTMLReport(data)
         : generateHTMLReport(data, code)
       
-      // Create a wrapper element
+      // Create a wrapper element with visible styles
       const element = document.createElement('div')
-      element.innerHTML = content
+      element.innerHTML = `
+        <div style="width: 100%; padding: 20px; background: white; color: black; font-family: Arial, Helvetica, sans-serif; font-size: 14px; line-height: 1.6;">
+          ${content}
+        </div>
+      `
       
-      // Apply styles inline
-      element.style.width = '210mm'
-      element.style.padding = '15mm'
-      element.style.background = 'white'
-      element.style.color = 'black'
-      element.style.fontFamily = 'Arial, Helvetica, sans-serif'
-      element.style.fontSize = '12px'
-      element.style.lineHeight = '1.5'
-      
-      // Append temporarily (off-screen)
-      element.style.position = 'fixed'
-      element.style.left = '-10000px'
-      element.style.top = '0'
+      // Append to body (visible for html2canvas to capture)
       document.body.appendChild(element)
+      
+      // Give browser time to render
+      await new Promise(resolve => setTimeout(resolve, 100))
       
       // Generate PDF with options
       const opt = {
-        margin: [10, 10, 10, 10],
+        margin: 10,
         filename: 'security-report.pdf',
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { 
           scale: 2,
           useCORS: true,
           logging: false,
-          letterRendering: true
+          backgroundColor: '#ffffff',
+          windowWidth: 800
         },
         jsPDF: { 
           unit: 'mm', 
@@ -329,46 +325,46 @@ const Dashboard = () => {
 
   const generateHTMLReport = (data, sourceCode) => {
     return `
-      <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto;">
-        <h1 style="color: #1a1a2e; border-bottom: 2px solid #0ea5e9;">Security Analysis Report</h1>
-        <p><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
+      <div style="font-family: Arial, sans-serif; max-width: 100%; margin: 0; padding: 0; color: #000000; background: #ffffff;">
+        <h1 style="color: #1a1a2e; border-bottom: 3px solid #0ea5e9; padding-bottom: 10px; margin-bottom: 20px; font-size: 24px;">Security Analysis Report</h1>
+        <p style="color: #333333; margin-bottom: 20px;"><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
         
-        <h2>Summary</h2>
-        <ul>
-          <li><strong>Language:</strong> ${data.language}</li>
-          <li><strong>Risk Score:</strong> <span style="color: ${data.risk_score > 70 ? 'red' : data.risk_score > 40 ? 'orange' : 'green'}">${data.risk_score}/100</span></li>
-          <li><strong>Summary:</strong> ${data.summary}</li>
+        <h2 style="color: #1a1a2e; font-size: 18px; margin-top: 25px;">Summary</h2>
+        <ul style="color: #333333; padding-left: 20px;">
+          <li style="margin-bottom: 8px;"><strong>Language:</strong> ${data.language || 'Unknown'}</li>
+          <li style="margin-bottom: 8px;"><strong>Risk Score:</strong> <span style="color: ${data.risk_score > 70 ? '#ef4444' : data.risk_score > 40 ? '#f97316' : '#22c55e'}; font-weight: bold;">${data.risk_score}/100</span></li>
+          <li style="margin-bottom: 8px;"><strong>Summary:</strong> ${data.summary || 'No summary available'}</li>
         </ul>
         
         ${data.vulnerabilities?.length > 0 ? `
-          <h2>Vulnerabilities (${data.vulnerabilities.length})</h2>
+          <h2 style="color: #1a1a2e; font-size: 18px; margin-top: 25px;">Vulnerabilities (${data.vulnerabilities.length})</h2>
           ${data.vulnerabilities.map((vuln, i) => `
-            <div style="background: #f5f5f5; padding: 15px; margin: 10px 0; border-left: 4px solid ${
+            <div style="background: #f8f9fa; padding: 15px; margin: 15px 0; border-left: 4px solid ${
               vuln.severity === 'critical' ? '#ef4444' : 
               vuln.severity === 'high' ? '#f97316' : 
               vuln.severity === 'medium' ? '#eab308' : '#3b82f6'
-            };">
-              <h3>${i + 1}. ${vuln.type} <span style="color: ${
+            }; border-radius: 4px;">
+              <h3 style="margin: 0 0 10px 0; color: #1a1a2e; font-size: 16px;">${i + 1}. ${vuln.type} <span style="color: ${
                 vuln.severity === 'critical' ? '#ef4444' : 
                 vuln.severity === 'high' ? '#f97316' : 
                 vuln.severity === 'medium' ? '#eab308' : '#3b82f6'
-              };">[${vuln.severity?.toUpperCase()}]</span></h3>
-              <p><strong>Line(s):</strong> ${vuln.line_numbers?.join(', ') || 'N/A'}</p>
-              <p>${vuln.description}</p>
-              ${vuln.fix_suggestion ? `<p><strong>Fix:</strong> ${vuln.fix_suggestion}</p>` : ''}
+              }; font-weight: bold;">[${(vuln.severity || 'unknown').toUpperCase()}]</span></h3>
+              <p style="margin: 5px 0; color: #333333;"><strong>Line(s):</strong> ${vuln.line_numbers?.join(', ') || 'N/A'}</p>
+              <p style="margin: 5px 0; color: #333333;">${vuln.description || 'No description'}</p>
+              ${vuln.fix_suggestion ? `<p style="margin: 10px 0 0 0; color: #166534; background: #dcfce7; padding: 10px; border-radius: 4px;"><strong>Fix:</strong> ${vuln.fix_suggestion}</p>` : ''}
             </div>
           `).join('')}
-        ` : ''}
+        ` : '<p style="color: #22c55e; font-weight: bold;">No vulnerabilities found! ✓</p>'}
         
         ${data.recommendations?.length > 0 ? `
-          <h2>Recommendations</h2>
-          <ul>
-            ${data.recommendations.map(rec => `<li>${rec}</li>`).join('')}
+          <h2 style="color: #1a1a2e; font-size: 18px; margin-top: 25px;">Recommendations</h2>
+          <ul style="color: #333333; padding-left: 20px;">
+            ${data.recommendations.map(rec => `<li style="margin-bottom: 8px;">${rec}</li>`).join('')}
           </ul>
         ` : ''}
         
-        <hr>
-        <p style="color: #666; font-size: 12px;">Generated by LLM Code Analyser</p>
+        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0 15px 0;">
+        <p style="color: #9ca3af; font-size: 12px; text-align: center;">Generated by LLM Code Analyser</p>
       </div>
     `
   }
@@ -406,38 +402,38 @@ const Dashboard = () => {
   const generateMultiFileHTMLReport = (data) => {
     return `
       <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto;">
-        <h1 style="color: #1a1a2e; border-bottom: 2px solid #0ea5e9;">Multi-File Security Analysis Report</h1>
-        <p><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
+        <h1 style="color: #1a1a2e; border-bottom: 3px solid #0ea5e9; padding-bottom: 10px; margin-bottom: 20px; font-size: 24px;">Multi-File Security Analysis Report</h1>
+        <p style="color: #333333; margin-bottom: 20px;"><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
         
-        <h2>Summary</h2>
-        <ul>
-          <li><strong>Total Files:</strong> ${data.total_files}</li>
-          <li><strong>Total Vulnerabilities:</strong> ${data.total_vulnerabilities}</li>
-          <li><strong>Overall Risk Score:</strong> <span style="color: ${data.overall_risk_score > 70 ? 'red' : data.overall_risk_score > 40 ? 'orange' : 'green'}">${data.overall_risk_score}/100</span></li>
+        <h2 style="color: #1a1a2e; font-size: 18px; margin-top: 25px;">Summary</h2>
+        <ul style="color: #333333; padding-left: 20px;">
+          <li style="margin-bottom: 8px;"><strong>Total Files:</strong> ${data.total_files || 0}</li>
+          <li style="margin-bottom: 8px;"><strong>Total Vulnerabilities:</strong> ${data.total_vulnerabilities || 0}</li>
+          <li style="margin-bottom: 8px;"><strong>Overall Risk Score:</strong> <span style="color: ${data.overall_risk_score > 70 ? '#ef4444' : data.overall_risk_score > 40 ? '#f97316' : '#22c55e'}; font-weight: bold;">${data.overall_risk_score}/100</span></li>
         </ul>
         
-        <h2>Files Analyzed</h2>
+        <h2 style="color: #1a1a2e; font-size: 18px; margin-top: 25px;">Files Analyzed</h2>
         ${data.results?.map((fileResult, i) => {
           const { filename, analysis } = fileResult
           return `
-            <div style="background: #f5f5f5; padding: 15px; margin: 10px 0; border-left: 4px solid ${
+            <div style="background: #f8f9fa; padding: 15px; margin: 15px 0; border-left: 4px solid ${
               analysis.risk_score >= 70 ? '#ef4444' : 
               analysis.risk_score >= 40 ? '#f97316' : '#22c55e'
-            };">
-              <h3>${i + 1}. ${filename}</h3>
-              <p><strong>Risk Score:</strong> ${analysis.risk_score}/100</p>
-              <p><strong>Vulnerabilities:</strong> ${analysis.vulnerabilities?.length || 0}</p>
+            }; border-radius: 4px;">
+              <h3 style="margin: 0 0 10px 0; color: #1a1a2e; font-size: 16px;">${i + 1}. ${filename}</h3>
+              <p style="margin: 5px 0; color: #333333;"><strong>Risk Score:</strong> ${analysis.risk_score}/100</p>
+              <p style="margin: 5px 0; color: #333333;"><strong>Vulnerabilities:</strong> ${analysis.vulnerabilities?.length || 0}</p>
               ${analysis.vulnerabilities?.length > 0 ? `
-                <ul>
-                  ${analysis.vulnerabilities.map(v => `<li><strong>${v.type}</strong> (${v.severity}): ${v.description}</li>`).join('')}
+                <ul style="color: #333333; padding-left: 20px; margin-top: 10px;">
+                  ${analysis.vulnerabilities.map(v => `<li style="margin-bottom: 5px;"><strong>${v.type}</strong> (${v.severity}): ${v.description}</li>`).join('')}
                 </ul>
-              ` : '<p style="color: green;">No vulnerabilities found</p>'}
+              ` : '<p style="color: #22c55e; font-weight: bold; margin-top: 10px;">No vulnerabilities found ✓</p>'}
             </div>
           `
         }).join('')}
         
-        <hr>
-        <p style="color: #666; font-size: 12px;">Generated by LLM Code Analyser</p>
+        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0 15px 0;">
+        <p style="color: #9ca3af; font-size: 12px; text-align: center;">Generated by LLM Code Analyser</p>
       </div>
     `
   }

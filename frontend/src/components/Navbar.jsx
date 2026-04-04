@@ -50,12 +50,20 @@ const Navbar = () => {
                       src={user.picture} 
                       alt={user.name} 
                       className="w-8 h-8 rounded-full border-2 border-cyan-400/50"
+                      referrerPolicy="no-referrer"
+                      crossOrigin="anonymous"
+                      onError={(e) => {
+                        e.target.style.display = 'none'
+                        e.target.nextSibling.style.display = 'flex'
+                      }}
                     />
-                  ) : (
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-purple-500 flex items-center justify-center">
-                      <User className="w-4 h-4 text-white" />
-                    </div>
-                  )}
+                  ) : null}
+                  <div 
+                    className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-purple-500 items-center justify-center"
+                    style={{ display: user.picture ? 'none' : 'flex' }}
+                  >
+                    <User className="w-4 h-4 text-white" />
+                  </div>
                   <span className="text-sm text-gray-300 hidden sm:block">
                     {user.name?.split(' ')[0]}
                   </span>
