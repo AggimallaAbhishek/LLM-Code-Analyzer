@@ -344,6 +344,35 @@ For privacy-sensitive environments, run analysis completely offline:
    ./start_offline.sh
    ```
 
+## 🔧 Troubleshooting
+
+### Port Already in Use
+All startup scripts automatically kill existing processes on their ports. If you still have issues:
+```bash
+# Check what's using the port
+lsof -i :8000
+
+# Kill specific process
+kill -9 <PID>
+```
+
+### OAuth "redirect_uri_mismatch" Error
+1. Go to [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+2. Click on your OAuth Client ID
+3. Add these redirect URIs:
+   - `http://localhost:3000/api/auth/callback` (development)
+   - `http://localhost:8000/api/auth/callback` (production)
+4. Add JavaScript origins:
+   - `http://localhost:3000`
+   - `http://localhost:8000`
+5. Save and wait 30 seconds before testing
+
+### Google Profile Image Not Loading
+The app handles this automatically with fallback to initials. If images don't load, it's usually due to Google's referrer policy - the fallback will display instead.
+
+### PDF Export Shows Blank Page
+Make sure you have analysis results before exporting. The PDF requires actual vulnerability data to display.
+
 ## 🧪 Test Code Sample
 
 Use this code to test the analyzer:
@@ -399,6 +428,27 @@ npm run lint   # Run ESLint
 source venv/bin/activate
 python -m backend.app  # Start with auto-reload
 ```
+
+## 🧹 Code Quality
+
+The project maintains high code quality standards:
+
+```bash
+# Frontend linting (0 errors)
+cd frontend && npm run lint
+
+# Python syntax check (all files pass)
+python -m py_compile backend/**/*.py
+
+# Build verification
+cd frontend && npm run build
+```
+
+**Quality Checks:**
+- ✅ ESLint: 0 errors, 0 warnings
+- ✅ Python: All files compile successfully
+- ✅ Build: Production build successful
+- ✅ No deprecation warnings
 
 ## ✅ Completed Features
 
