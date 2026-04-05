@@ -2,7 +2,7 @@
 
 AI-powered code security analysis tool that combines Large Language Models with static analysis to identify vulnerabilities, attack surfaces, and trust boundaries in source code.
 
-![LLM Code Analyser](https://img.shields.io/badge/version-1.1.0-blue.svg)
+![LLM Code Analyser](https://img.shields.io/badge/version-1.2.0-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.12+-green.svg)
 ![License](https://img.shields.io/badge/license-MIT-purple.svg)
 
@@ -92,19 +92,24 @@ AI-powered code security analysis tool that combines Large Language Models with 
 
 7. **Run the application**
    
-   **Online Mode (Gemini):**
+   **Development Mode (Recommended for testing OAuth):**
    ```bash
-   ./start_online.sh
+   ./start_dev.sh
+   # Frontend: http://localhost:3000
+   # Backend: http://localhost:8000
    ```
    
-   **Offline Mode (Ollama):**
+   **Production - Online Mode (Gemini):**
+   ```bash
+   ./start_online.sh
+   # Access: http://localhost:8000
+   ```
+   
+   **Production - Offline Mode (Ollama):**
    ```bash
    ./start_offline.sh
+   # Access: http://localhost:8001
    ```
-
-8. **Open the UI**
-   - Online mode: http://localhost:8000
-   - Offline mode: http://localhost:8001
 
 ## 🔐 Authentication Setup
 
@@ -119,23 +124,26 @@ This application uses Google OAuth for secure authentication. All pages require 
 2. **Create OAuth 2.0 Credentials**
    - Click "Create Credentials" → "OAuth client ID"
    - Select "Web application"
+   - Add Authorized JavaScript origins:
+     - `http://localhost:3000` (for development mode)
+     - `http://localhost:8000` (for production online mode)
    - Add Authorized redirect URIs:
-     - `http://localhost:8000/api/auth/callback` (for online mode)
-     - `http://localhost:8001/api/auth/callback` (for offline mode)
-     - Your production URL (if deploying)
+     - `http://localhost:3000/api/auth/callback` (for development mode)
+     - `http://localhost:8000/api/auth/callback` (for production online mode)
+     - `http://localhost:8001/api/auth/callback` (for production offline mode)
 
 3. **Configure .env file**
    ```env
    # Google OAuth
    GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
    GOOGLE_CLIENT_SECRET=your-client-secret
-   SECRET_KEY=generate-a-random-string
-   FRONTEND_URL=http://localhost:8000
+   SECRET_KEY=YourAlphanumericSecretKeyHere
+   FRONTEND_URL=http://localhost:3000
    ```
 
-4. **Generate SECRET_KEY**
+4. **Generate SECRET_KEY** (alphanumeric only)
    ```bash
-   python3 -c "import secrets; print(secrets.token_urlsafe(32))"
+   python3 -c "import secrets; import string; chars = string.ascii_letters + string.digits; print(''.join(secrets.choice(chars) for _ in range(48)))"
    ```
 
 ### Authentication Flow
@@ -161,15 +169,18 @@ This application uses Google OAuth for secure authentication. All pages require 
 | `PORT` | Server port | `8000` |
 | `GOOGLE_CLIENT_ID` | Google OAuth Client ID | - |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth Client Secret | - |
-| `SECRET_KEY` | JWT signing key | auto-generated |
-| `FRONTEND_URL` | Frontend URL for OAuth redirect | `http://localhost:8000` |
+| `SECRET_KEY` | JWT signing key (alphanumeric) | - |
+| `FRONTEND_URL` | Frontend URL for OAuth redirect | `http://localhost:3000` |
 
 ### Startup Scripts
 
-| Script | Mode | Port | Model |
-|--------|------|------|-------|
-| `./start_online.sh` | Gemini (Cloud) | 8000 | gemini-2.0-flash |
-| `./start_offline.sh` | Ollama (Local) | 8001 | qwen3-coder:480b-cloud |
+| Script | Mode | Port | Description |
+|--------|------|------|-------------|
+| `./start_dev.sh` | Development | 3000 (FE) + 8000 (BE) | Hot-reload, best for OAuth testing |
+| `./start_online.sh` | Production (Gemini) | 8000 | Cloud-based AI analysis |
+| `./start_offline.sh` | Production (Ollama) | 8001 | Local AI analysis |
+
+All scripts automatically kill existing processes on their ports before starting.
 
 ## 📖 API Usage
 
@@ -389,15 +400,19 @@ python -m backend.app  # Start with auto-reload
 
 ## ✅ Completed Features
 
-- [x] AI-driven vulnerability detection
+- [x] AI-driven vulnerability detection (Gemini/Ollama)
 - [x] Static analysis with 20+ patterns
 - [x] Google OAuth authentication
 - [x] Syntax highlighting (Prism.js)
-- [x] Line highlighting for vulnerabilities
+- [x] Line highlighting for vulnerabilities (severity-based colors)
 - [x] Export reports (JSON/Markdown/PDF)
 - [x] Multi-file upload (ZIP support)
 - [x] Copy fixed code button
-- [x] User profile & logout
+- [x] User profile with Google avatar
+- [x] Secure logout functionality
+- [x] Development mode with hot-reload
+- [x] Automatic port cleanup on startup
+- [x] Modern lifespan event handling (no deprecation warnings)
 
 ## 🚧 Roadmap
 
@@ -407,6 +422,7 @@ python -m backend.app  # Start with auto-reload
 - [ ] CI/CD pipeline integration
 - [ ] Custom vulnerability rules
 - [ ] Team collaboration features
+- [ ] Dark/Light theme toggle
 
 ## 🤝 Contributing
 
