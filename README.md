@@ -252,11 +252,11 @@ curl -X POST http://localhost:8000/api/analyze-multiple \
 ```
 LLM-Code-Analyzer/
 ├── backend/
-│   ├── app.py                 # FastAPI application
+│   ├── app.py                 # FastAPI application with lifespan events
 │   ├── config.py              # Configuration settings
 │   ├── routes/
 │   │   ├── analyze.py         # Analysis API endpoints
-│   │   └── auth.py            # Authentication endpoints
+│   │   └── auth.py            # Google OAuth authentication
 │   ├── services/
 │   │   ├── analyzer.py        # Main analysis orchestration
 │   │   ├── llm_service.py     # LLM integration (Gemini/OpenAI/Ollama)
@@ -268,13 +268,13 @@ LLM-Code-Analyzer/
 ├── frontend/
 │   ├── src/
 │   │   ├── context/
-│   │   │   └── AuthContext.jsx    # Authentication state
+│   │   │   └── AuthContext.jsx    # Authentication state management
 │   │   ├── pages/
 │   │   │   ├── LoginPage.jsx      # Google OAuth login
 │   │   │   ├── LandingPage.jsx    # Hero, features, stats
-│   │   │   └── Dashboard.jsx      # Code editor & results
+│   │   │   └── Dashboard.jsx      # Code editor, results, exports
 │   │   └── components/
-│   │       ├── Navbar.jsx         # Navigation with user menu
+│   │       ├── Navbar.jsx         # Navigation with user profile
 │   │       ├── ProtectedRoute.jsx # Route protection
 │   │       ├── CodeEditor.jsx     # Syntax highlighted editor
 │   │       ├── ResultsPanel.jsx   # Vulnerability display
@@ -282,12 +282,14 @@ LLM-Code-Analyzer/
 │   │       ├── MultiFileResults.jsx # Multi-file results
 │   │       └── GlowButton.jsx     # Animated buttons
 │   ├── index.html
-│   └── vite.config.js
+│   └── vite.config.js         # Vite config with API proxy
 ├── data/                      # Sample vulnerable code
 ├── docs/                      # Documentation
-├── start_online.sh            # Start with Gemini (port 8000)
-├── start_offline.sh           # Start with Ollama (port 8001)
+├── start_dev.sh               # Development mode (FE + BE with hot-reload)
+├── start_online.sh            # Production with Gemini (port 8000)
+├── start_offline.sh           # Production with Ollama (port 8001)
 ├── requirements.txt           # Python dependencies
+├── .gitignore                 # Git ignore rules
 └── README.md
 ```
 
@@ -445,6 +447,7 @@ MIT License - see [LICENSE](LICENSE) file for details.
 - AI powered by [Google Gemini](https://ai.google.dev/) and [Ollama](https://ollama.ai/)
 - Authentication by [Authlib](https://authlib.org/) + Google OAuth
 - Syntax highlighting by [Prism.js](https://prismjs.com/)
+- PDF export by [html2pdf.js](https://ekoopmans.github.io/html2pdf.js/)
 - Animations by [Framer Motion](https://www.framer.com/motion/)
 
 ---
