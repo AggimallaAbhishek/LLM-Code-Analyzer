@@ -277,7 +277,7 @@ const Dashboard = () => {
     URL.revokeObjectURL(url)
   }
 
-  const generateMarkdownReport = (data, sourceCode) => {
+  const generateMarkdownReport = (data, _sourceCode) => {
     let md = `# Security Analysis Report\n\n`
     md += `**Generated:** ${new Date().toLocaleString()}\n\n`
     md += `## Summary\n\n`
@@ -323,7 +323,7 @@ const Dashboard = () => {
     return md
   }
 
-  const generateHTMLReport = (data, sourceCode) => {
+  const generateHTMLReport = (data, _sourceCode) => {
     return `
       <div style="font-family: Arial, sans-serif; max-width: 100%; margin: 0; padding: 0; color: #000000; background: #ffffff;">
         <h1 style="color: #1a1a2e; border-bottom: 3px solid #0ea5e9; padding-bottom: 10px; margin-bottom: 20px; font-size: 24px;">Security Analysis Report</h1>

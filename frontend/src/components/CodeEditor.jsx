@@ -1,4 +1,4 @@
-import { useRef, useMemo, useEffect } from 'react'
+import { useRef, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import Prism from 'prismjs'
 import 'prismjs/themes/prism-tomorrow.css'

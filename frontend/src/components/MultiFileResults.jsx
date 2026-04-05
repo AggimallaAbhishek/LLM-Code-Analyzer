@@ -3,8 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { FileCode, ChevronDown, ChevronRight, AlertTriangle, CheckCircle, XCircle, Shield } from 'lucide-react'
 import ResultsPanel from './ResultsPanel'
 
-const severityOrder = { critical: 0, high: 1, medium: 2, low: 3 }
-
 const MultiFileResults = ({ results, isLoading }) => {
   const [expandedFile, setExpandedFile] = useState(null)
 

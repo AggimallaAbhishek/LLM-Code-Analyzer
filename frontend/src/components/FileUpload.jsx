@@ -139,6 +139,7 @@ const FileUpload = ({ onFilesSelected, maxFiles = 50 }) => {
     }
 
     setIsProcessing(false)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onFilesSelected, maxFiles])
 
   const handleDragOver = (e) => {
