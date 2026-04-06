@@ -49,15 +49,10 @@ class AnalyzerService:
                 prompt = f"Additional context: {context}\n\n{prompt}"
             
             # Step 3: Get LLM analysis
-            try:
-                llm_result = await self.llm_service.analyze(prompt)
-                # Step 4: Merge and validate results
-                return self._build_response(llm_result, static_findings)
-            except LLMError as e:
-                # LLM failed - fall back to static analysis only
-                if static_findings:
-                    return self._build_static_only_response(static_findings, language, str(e))
-                raise
+            llm_result = await self.llm_service.analyze(prompt)
+            
+            # Step 4: Merge and validate results
+            return self._build_response(llm_result, static_findings)
             
         except LLMError as e:
             return AnalysisResponse(
@@ -75,34 +70,6 @@ class AnalyzerService:
                 risk_score=0,
                 error=str(e)
             )
-    
-    def _build_static_only_response(self, static_findings: list, language: str, llm_error: str) -> AnalysisResponse:
-        """Build response from static analysis when LLM fails."""
-        vulnerabilities = []
-        for finding in static_findings:
-            vulnerabilities.append({
-                "type": finding.get("type", "Unknown"),
-                "severity": finding.get("severity", "medium"),
-                "line_numbers": [finding.get("line", 0)],
-                "description": finding.get("description", ""),
-                "vulnerable_code": finding.get("code_snippet", ""),
-                "fix_suggestion": "Review and fix this security issue",
-                "fixed_code": ""
-            })
-        
-        risk_score = self._calculate_risk_score(vulnerabilities)
-        
-        return AnalysisResponse(
-            success=True,
-            language=language,
-            summary=f"Static analysis found {len(vulnerabilities)} issues. (LLM unavailable: {llm_error[:50]}...)",
-            risk_score=risk_score,
-            vulnerabilities=vulnerabilities,
-            static_findings=static_findings,
-            attack_surfaces=[],
-            trust_boundaries=[],
-            recommendations=["Review all flagged vulnerabilities", "Consider using parameterized queries", "Avoid dangerous functions like eval()"]
-        )
     
     def _build_response(self, llm_result: Dict[str, Any], static_findings: list) -> AnalysisResponse:
         """Build the analysis response from LLM results and static findings."""

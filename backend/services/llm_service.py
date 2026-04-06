@@ -1,6 +1,6 @@
 """
-LLM Service for interacting with OpenAI, Gemini, and Ollama.
-Provides unified interface for multiple LLM providers.
+LLM Service for interacting with OpenAI and Ollama.
+Provides unified interface for both online and offline LLM modes.
 """
 
 import json
@@ -12,24 +12,17 @@ from backend.config import settings
 
 
 class LLMService:
-    """Service for LLM interactions supporting OpenAI, Gemini, and Ollama."""
+    """Service for LLM interactions supporting both OpenAI and Ollama."""
     
     def __init__(self):
         self.mode = settings.llm_mode
         
-        if self.mode == "openai":
+        if self.mode == "online":
             if not settings.openai_api_key:
-                raise ValueError("OPENAI_API_KEY is required for OpenAI mode")
+                raise ValueError("OPENAI_API_KEY is required for online mode")
             self.client = OpenAI(api_key=settings.openai_api_key)
             self.model = settings.openai_model
-        elif self.mode == "gemini":
-            if not settings.gemini_api_key:
-                raise ValueError("GEMINI_API_KEY is required for Gemini mode")
-            import google.generativeai as genai
-            genai.configure(api_key=settings.gemini_api_key)
-            self.genai = genai
-            self.model = settings.gemini_model
-        else:  # ollama
+        else:
             self.ollama_url = settings.ollama_base_url
             self.model = settings.ollama_model
     
@@ -43,10 +36,8 @@ class LLMService:
         Returns:
             Parsed JSON response from LLM
         """
-        if self.mode == "openai":
+        if self.mode == "online":
             return await self._analyze_openai(prompt)
-        elif self.mode == "gemini":
-            return await self._analyze_gemini(prompt)
         else:
             return await self._analyze_ollama(prompt)
     
@@ -78,90 +69,36 @@ class LLMService:
         except Exception as e:
             raise LLMError(f"Unexpected error during OpenAI analysis: {str(e)}")
     
-    async def _analyze_gemini(self, prompt: str) -> dict:
-        """Analyze using Google Gemini API."""
-        try:
-            model = self.genai.GenerativeModel(
-                self.model,
-                generation_config={
-                    "temperature": 0.1,
-                    "max_output_tokens": 4096,
-                }
-            )
-            
-            full_prompt = f"""You are a security expert analyzing code for vulnerabilities. 
-You must respond with valid JSON only - no markdown, no code blocks, just pure JSON.
-
-{prompt}"""
-            
-            response = model.generate_content(full_prompt)
-            content = response.text
-            return self._parse_response(content)
-            
-        except Exception as e:
-            raise LLMError(f"Gemini API error: {str(e)}")
-    
     async def _analyze_ollama(self, prompt: str) -> dict:
-        """Analyze using Ollama local model with streaming to avoid truncation."""
+        """Analyze using Ollama local model."""
         try:
-            # Reduced timeout - fall back to static analysis faster if LLM is slow
-            timeout = httpx.Timeout(120.0, connect=30.0)
-            
-            async with httpx.AsyncClient(timeout=timeout) as client:
-                # Use streaming to avoid truncation issues
-                async with client.stream(
-                    "POST",
+            async with httpx.AsyncClient(timeout=settings.analysis_timeout) as client:
+                response = await client.post(
                     f"{self.ollama_url}/api/generate",
                     json={
                         "model": self.model,
-                        "prompt": f"""Analyze this code for security vulnerabilities. Return ONLY a valid JSON object.
-
-{prompt}
-
-RULES:
-1. Return ONLY valid JSON, no other text
-2. Keep all descriptions under 25 words
-3. Maximum 4 vulnerabilities
-4. Start with {{ end with }}""",
-                        "stream": True,
-                        "options": {
-                            "temperature": 0.1,
-                            "num_predict": 4096,
-                            "num_ctx": 8192
-                        }
+                        "prompt": prompt,
+                        "stream": False,
+                        "format": "json"
                     }
-                ) as response:
-                    response.raise_for_status()
-                    
-                    # Collect all streamed chunks
-                    full_response = ""
-                    async for line in response.aiter_lines():
-                        if line.strip():
-                            try:
-                                chunk = json.loads(line)
-                                full_response += chunk.get("response", "")
-                                if chunk.get("done", False):
-                                    break
-                            except json.JSONDecodeError:
-                                continue
+                )
+                response.raise_for_status()
                 
-                if not full_response.strip():
-                    raise LLMError("Ollama returned empty response")
-                
-                return self._parse_response(full_response)
+                result = response.json()
+                content = result.get("response", "")
+                return self._parse_response(content)
                 
         except httpx.TimeoutException:
-            raise LLMError("Ollama request timed out. Try with smaller code.")
+            raise LLMError("Ollama request timed out. The model may be loading or the code is too complex.")
         except httpx.HTTPError as e:
             raise LLMError(f"Ollama API error: {str(e)}")
-        except LLMError:
-            raise
         except Exception as e:
             raise LLMError(f"Unexpected error during Ollama analysis: {str(e)}")
     
     def _parse_response(self, content: str) -> dict:
-        """Parse LLM response into structured dict with repair for truncated JSON."""
+        """Parse LLM response into structured dict."""
         try:
+            # Clean up response if needed
             content = content.strip()
             
             # Handle potential markdown code blocks
@@ -169,74 +106,21 @@ RULES:
                 lines = content.split("\n")
                 content = "\n".join(lines[1:-1])
             
-            # Try to find JSON object in the response
-            start_idx = content.find('{')
-            end_idx = content.rfind('}')
-            
-            if start_idx != -1 and end_idx != -1:
-                content = content[start_idx:end_idx + 1]
-            elif start_idx != -1:
-                # JSON is truncated - try to repair it
-                content = self._repair_truncated_json(content[start_idx:])
-            
             return json.loads(content)
         except json.JSONDecodeError as e:
-            # Try to repair and parse again
-            try:
-                repaired = self._repair_truncated_json(content)
-                return json.loads(repaired)
-            except:
-                raise LLMError(f"Failed to parse LLM response as JSON: {str(e)}\nResponse: {content[:500]}")
-    
-    def _repair_truncated_json(self, content: str) -> str:
-        """Attempt to repair truncated JSON by closing open structures."""
-        # Count open brackets and braces
-        open_braces = content.count('{') - content.count('}')
-        open_brackets = content.count('[') - content.count(']')
-        
-        # Check if we're in the middle of a string
-        in_string = False
-        escape_next = False
-        for char in content:
-            if escape_next:
-                escape_next = False
-                continue
-            if char == '\\':
-                escape_next = True
-                continue
-            if char == '"':
-                in_string = not in_string
-        
-        # If in string, close it
-        if in_string:
-            content += '"'
-        
-        # Remove trailing comma if present
-        content = content.rstrip().rstrip(',')
-        
-        # Close open brackets and braces
-        content += ']' * open_brackets
-        content += '}' * open_braces
-        
-        return content
+            raise LLMError(f"Failed to parse LLM response as JSON: {str(e)}\nResponse: {content[:500]}")
     
     def health_check(self) -> bool:
         """Check if the LLM service is available."""
-        if self.mode == "openai":
+        if self.mode == "online":
             try:
                 self.client.models.list()
                 return True
             except Exception:
                 return False
-        elif self.mode == "gemini":
+        else:
             try:
-                # Simple check - list models
-                list(self.genai.list_models())
-                return True
-            except Exception:
-                return False
-        else:  # ollama
-            try:
+                import httpx
                 response = httpx.get(f"{self.ollama_url}/api/tags", timeout=5)
                 return response.status_code == 200
             except Exception:
