@@ -176,6 +176,62 @@ FastAPI Backend
 | `frontend/src/components/MultiFileResults.jsx` | Displays aggregated file-wise analysis |
 | `frontend/src/components/ProtectedRoute.jsx` | Restricts routes to authenticated users |
 
+### 7.3 How the Code Works Internally
+
+This section explains the actual runtime behavior of the current codebase, based on the implementation present in the repository.
+
+#### 7.3.1 Application Bootstrap
+
+1. `backend/app.py` creates the FastAPI application, registers CORS and session middleware, includes the authentication and analysis routers, and serves the built React frontend when `frontend/dist` is available.
+2. The same file also defines startup logging so the running mode, selected model, OAuth status, and API documentation URL are visible in the terminal during launch.
+3. On the client side, `frontend/src/App.jsx` wires the route tree and wraps the application with `AuthProvider`, making authentication state available across protected pages.
+
+#### 7.3.2 Authentication Flow
+
+1. `frontend/src/context/AuthContext.jsx` runs `checkAuth()` when the application loads.
+2. If the URL contains `auth=success` and a `token`, the token is stored in `localStorage` and the query string is removed from the browser URL.
+3. The frontend then calls `/api/auth/status` to confirm whether a valid authenticated user is present through the session or bearer token.
+4. `frontend/src/components/ProtectedRoute.jsx` keeps `/` and `/dashboard` inaccessible until authentication status is known and redirects unauthenticated users to `/login`.
+5. `frontend/src/pages/LoginPage.jsx` starts the login flow by redirecting the browser to `/api/auth/login`.
+6. In `backend/routes/auth.py`, the backend redirects the user to Google OAuth, handles the callback, stores basic user information in the session, creates a JWT access token, and redirects back to the frontend with the token in the query string.
+
+In the current implementation, access control is enforced primarily at the frontend routing layer through `ProtectedRoute`, while the analysis endpoints themselves focus on request validation and analysis execution.
+
+#### 7.3.3 Single-File Analysis Flow
+
+1. `frontend/src/pages/Dashboard.jsx` stores the source code, selected language, analysis state, and analysis results in React state variables.
+2. When the user clicks **Analyze Code**, the `analyzeCode()` function checks that the editor is not empty, updates the progress text shown in the UI, and sends a `POST /api/analyze` request containing `{ code, language }`.
+3. `backend/routes/analyze.py` validates that code is present and within the configured size limit before delegating work to `AnalyzerService`.
+4. `backend/services/analyzer.py` is the main orchestration layer. It first runs static analysis, then builds the LLM prompt, optionally appends extra context, calls the LLM service, and finally converts the combined output into a structured `AnalysisResponse`.
+5. `backend/services/static_analyzer.py` scans the code line by line using language-specific regular expressions and generic security rules, such as SQL injection, command injection, dangerous `eval()`, hardcoded secrets, insecure deserialization, weak cryptography, and debug mode exposure.
+6. `backend/utils/prompt_engine.py` injects the source code and any static findings into a strict JSON-oriented prompt so the model returns predictable fields such as vulnerabilities, attack surfaces, trust boundaries, and recommendations.
+7. `backend/services/llm_service.py` sends the prompt to the configured model backend, strips Markdown code fences if necessary, and parses the returned JSON.
+8. `backend/models/schemas.py` validates the final response shape through Pydantic models before it is returned to the client.
+9. `frontend/src/components/ResultsPanel.jsx` renders the returned summary, risk score, vulnerabilities, attack surfaces, trust boundaries, recommendations, and suggested fixed code.
+
+#### 7.3.4 Multi-File Analysis Flow
+
+1. `frontend/src/components/FileUpload.jsx` accepts individual source files or ZIP archives, reads file content in the browser, infers language from file extension, and skips hidden or irrelevant paths such as `node_modules`, `.git`, and `__pycache__`.
+2. The processed files are passed back to `Dashboard.jsx` as objects containing `filename`, `content`, `language`, and file size.
+3. When the user starts multi-file analysis, the dashboard sends these files to `POST /api/analyze-multiple`.
+4. `backend/routes/analyze.py` loops through the uploaded files, reuses the same `AnalyzerService.analyze_code()` method for each file, and aggregates the results into a `MultiFileAnalysisResponse`.
+5. The aggregated response includes per-file findings, total vulnerability count, and an overall risk score computed from the analyzed files.
+
+#### 7.3.5 Reporting and Export Flow
+
+1. `Dashboard.jsx` contains the report-generation functions used by the export menu.
+2. JSON export serializes the current result object directly.
+3. Markdown export builds a readable report string containing summary data, vulnerability details, attack surfaces, and recommendations.
+4. PDF export first generates HTML markup and then converts it to a downloadable PDF in the browser using `html2pdf.js`.
+5. `ResultsPanel.jsx` also allows the user to copy the suggested fixed code for a vulnerability using the Clipboard API.
+
+#### 7.3.6 Error Handling and Risk Scoring
+
+1. Empty submissions, oversized code blocks, and excessive multi-file uploads are rejected at the API layer with explicit HTTP errors.
+2. `AnalyzerService` catches LLM-specific failures and unexpected exceptions and still returns a structured error response to the frontend.
+3. If the LLM does not provide a risk score, the backend calculates one from vulnerability severities and clamps the final value between 0 and 100.
+4. Duplicate static findings on the same line are removed before they are returned.
+
 ## 8. Development Process From Start to End
 
 This section summarizes the complete development journey in chronological order.
@@ -328,7 +384,7 @@ The frontend build completed successfully. Vite reported a large chunk warning r
 The working flow of the final application is as follows:
 
 1. The user opens the application.
-2. Unauthenticated users are redirected to the login page.
+2. Unauthenticated users are redirected to the login page by the protected frontend route layer.
 3. The user signs in through Google OAuth.
 4. After login, the user accesses the secured landing page or dashboard.
 5. The user either pastes a code snippet or uploads multiple files.
@@ -344,8 +400,8 @@ The working flow of the final application is as follows:
 
 The project was built around secure-coding analysis, so several security-focused decisions were included in the implementation:
 
-1. Google OAuth-based authentication for protected access.
-2. JWT token generation for authenticated API usage.
+1. Google OAuth-based authentication for protected frontend access.
+2. JWT token generation for authenticated session restoration and user status checks.
 3. Session-based user tracking.
 4. Request validation through Pydantic schemas.
 5. Maximum code-length restriction for analysis requests.
