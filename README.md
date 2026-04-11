@@ -1,4 +1,4 @@
-# 🔍 LLM Code Analyser
+# 🔍 LLM Code Analyser.
 
 AI-powered code security analysis tool that combines Large Language Models with static analysis to identify vulnerabilities, attack surfaces, and trust boundaries in source code.
 
