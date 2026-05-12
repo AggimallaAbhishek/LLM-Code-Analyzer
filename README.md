@@ -503,5 +503,5 @@ MIT License - see [LICENSE](LICENSE) file for details.
 ---
 
 <p align="center">
-  Built with ❤️ for secure code everywhere
+  Built for secure code everywhere
 </p>
