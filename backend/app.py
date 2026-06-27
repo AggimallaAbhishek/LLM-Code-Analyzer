@@ -11,11 +11,27 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from starlette.middleware.sessions import SessionMiddleware
 from contextlib import asynccontextmanager
+from typing import Dict, Any
 import os
 
 from backend.routes.analyze import router as analyze_router
 from backend.routes.auth import router as auth_router
+from backend.utils.rate_limit import setup_rate_limiting, limiter
+from backend.utils.logger import get_logger, set_correlation_id, get_correlation_id
 from backend.config import settings
+
+logger = get_logger("app")
+
+
+def extract_client_info(request: Request) -> Dict[str, Any]:
+    """Extract client information for logging."""
+    client_ip = request.client.host if request.client else "unknown"
+    user_agent = request.headers.get("user-agent", "unknown")
+    
+    return {
+        "client_ip": client_ip,
+        "user_agent": user_agent
+    }
 
 # Lifespan event handler (replaces deprecated on_event)
 @asynccontextmanager
@@ -23,6 +39,13 @@ async def lifespan(app: FastAPI):
     """Handle startup and shutdown events."""
     # Startup
     frontend_dist = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
+    logger.info(
+        "Starting LLM Code Analyser",
+        llm_mode=settings.llm_mode,
+        host=settings.host,
+        port=settings.port
+    )
+    
     print(f"🚀 LLM Code Analyser starting...")
     print(f"📊 Mode: {settings.llm_mode}")
     if settings.llm_mode == "openai":
@@ -45,6 +68,7 @@ async def lifespan(app: FastAPI):
     yield
     
     # Shutdown
+    logger.info("Shutting down LLM Code Analyser")
     print("👋 LLM Code Analyser shutting down...")
 
 # Create FastAPI application
@@ -80,9 +104,20 @@ app.add_middleware(
 app.include_router(analyze_router, prefix="/api", tags=["analysis"])
 app.include_router(auth_router, prefix="/api/auth", tags=["authentication"])
 
+# Setup rate limiting
+limiter = setup_rate_limiting(app)
+
 # Check for built React frontend
 frontend_dist = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
 frontend_assets = os.path.join(frontend_dist, "assets")
+    """Extract client information for logging."""
+    client_ip = request.client.host if request.client else "unknown"
+    user_agent = request.headers.get("user-agent", "unknown")
+    
+    return {
+        "client_ip": client_ip,
+        "user_agent": user_agent
+    }
 
 if os.path.exists(frontend_dist):
     # Serve static assets from React build

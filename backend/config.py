@@ -39,6 +39,11 @@ class Settings(BaseModel):
     max_code_length: int = int(os.getenv("MAX_CODE_LENGTH", "50000"))
     analysis_timeout: int = int(os.getenv("ANALYSIS_TIMEOUT", "120"))
     
+    # Rate Limiting Configuration
+    analysis_requests_per_minute: int = int(os.getenv("RATE_LIMIT_ANALYSIS_PER_MINUTE", "60"))
+    auth_requests_per_minute: int = int(os.getenv("RATE_LIMIT_AUTH_PER_MINUTE", "10"))
+    redis_url: Optional[str] = os.getenv("REDIS_URL", "")
+    
     # Google OAuth Configuration
     google_client_id: str = os.getenv("GOOGLE_CLIENT_ID", "")
     google_client_secret: str = os.getenv("GOOGLE_CLIENT_SECRET", "")

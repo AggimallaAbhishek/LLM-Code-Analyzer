@@ -2,7 +2,8 @@
 API routes for code analysis endpoints.
 """
 
-from fastapi import APIRouter, HTTPException
+import uuid
+from fastapi import APIRouter, HTTPException, Request
 from backend.models.schemas import (
     AnalysisRequest, AnalysisResponse, HealthResponse,
     MultiFileAnalysisRequest, MultiFileAnalysisResponse, FileAnalysisResult
@@ -10,12 +11,17 @@ from backend.models.schemas import (
 from backend.services.analyzer import get_analyzer_service
 from backend.services.llm_service import get_llm_service
 from backend.config import settings
+from backend.utils.rate_limit import get_rate_limit_remaining, update_rate_limit
+from backend.utils.logger import get_logger, set_correlation_id
+
+logger = get_logger("analyze_routes")
 
 router = APIRouter()
 
 
 @router.post("/analyze", response_model=AnalysisResponse)
-async def analyze_code(request: AnalysisRequest) -> AnalysisResponse:
+@limiter.limit(f"{settings.analysis_requests_per_minute} per minute")
+async def analyze_code(request: Request, request_data: AnalysisRequest) -> AnalysisResponse:
     """
     Analyze source code for security vulnerabilities.
     
@@ -25,21 +31,56 @@ async def analyze_code(request: AnalysisRequest) -> AnalysisResponse:
     
     Returns attack surfaces, trust boundaries, vulnerabilities, and fix suggestions.
     """
-    if not request.code or not request.code.strip():
+    # Get client IP and correlation ID
+    client_ip = request.client.host if request.client else "unknown"
+    correlation_id = request.headers.get("X-Correlation-ID", None)
+    if not correlation_id:
+        correlation_id = str(uuid.uuid4())
+        request.headers.__setitem__("X-Correlation-ID", correlation_id)
+    
+    set_correlation_id(correlation_id)
+    
+    if not request_data.code or not request_data.code.strip():
         raise HTTPException(status_code=400, detail="Code cannot be empty")
     
-    if len(request.code) > settings.max_code_length:
+    if len(request_data.code) > settings.max_code_length:
         raise HTTPException(
             status_code=400, 
             detail=f"Code exceeds maximum length of {settings.max_code_length} characters"
         )
     
+    logger.info(
+        "Starting code analysis",
+        correlation_id=correlation_id,
+        client_ip=client_ip,
+        language=request_data.language or "auto"
+    )
+    
+    update_rate_limit(client_ip)
+    
     analyzer = get_analyzer_service()
     result = await analyzer.analyze_code(
-        code=request.code,
-        language=request.language or "auto",
-        context=request.context
+        code=request_data.code,
+        language=request_data.language or "auto",
+        context=request_data.context
     )
+    
+    if result.success:
+        logger.info(
+            "Analysis completed successfully",
+            correlation_id=correlation_id,
+            client_ip=client_ip,
+            language=result.language,
+            risk_score=result.risk_score,
+            vulnerabilities_count=len(result.vulnerabilities)
+        )
+    else:
+        logger.error(
+            "Analysis failed",
+            correlation_id=correlation_id,
+            client_ip=client_ip,
+            error=result.error
+        )
     
     return result
 
