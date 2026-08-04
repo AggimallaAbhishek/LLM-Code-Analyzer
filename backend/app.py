@@ -110,14 +110,6 @@ limiter = setup_rate_limiting(app)
 # Check for built React frontend
 frontend_dist = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
 frontend_assets = os.path.join(frontend_dist, "assets")
-    """Extract client information for logging."""
-    client_ip = request.client.host if request.client else "unknown"
-    user_agent = request.headers.get("user-agent", "unknown")
-    
-    return {
-        "client_ip": client_ip,
-        "user_agent": user_agent
-    }
 
 if os.path.exists(frontend_dist):
     # Serve static assets from React build

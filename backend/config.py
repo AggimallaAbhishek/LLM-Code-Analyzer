@@ -5,7 +5,7 @@ Loads settings from environment variables with sensible defaults.
 
 import os
 import secrets
-from typing import Literal
+from typing import Literal, Optional
 from dotenv import load_dotenv
 from pydantic import BaseModel
 

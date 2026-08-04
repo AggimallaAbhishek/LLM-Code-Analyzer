@@ -11,7 +11,7 @@ from backend.models.schemas import (
 from backend.services.analyzer import get_analyzer_service
 from backend.services.llm_service import get_llm_service
 from backend.config import settings
-from backend.utils.rate_limit import get_rate_limit_remaining, update_rate_limit
+from backend.utils.rate_limit import get_rate_limit_remaining, update_rate_limit, limiter
 from backend.utils.logger import get_logger, set_correlation_id
 
 logger = get_logger("analyze_routes")
