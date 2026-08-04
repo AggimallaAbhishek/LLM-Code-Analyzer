@@ -36,7 +36,6 @@ async def analyze_code(request: Request, request_data: AnalysisRequest) -> Analy
     correlation_id = request.headers.get("X-Correlation-ID", None)
     if not correlation_id:
         correlation_id = str(uuid.uuid4())
-        request.headers.__setitem__("X-Correlation-ID", correlation_id)
     
     set_correlation_id(correlation_id)
     

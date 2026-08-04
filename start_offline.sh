@@ -7,7 +7,7 @@ source venv/bin/activate
 
 export LLM_MODE=ollama
 export PORT=8001
-export OLLAMA_MODEL=qwen3-coder:480b-cloud
+export OLLAMA_MODEL=gpt-oss:20b-cloud
 
 # Kill any existing process on port 8001
 echo "🔄 Cleaning up old processes on port 8001..."
@@ -23,7 +23,7 @@ fi
 
 echo "🔒 Starting LLM Code Analyser - OFFLINE MODE (Ollama)"
 echo "📍 URL: http://localhost:8001"
-echo "🤖 Model: qwen3-coder:480b-cloud"
+echo "🤖 Model: gpt-oss:20b-cloud"
 echo ""
 
 python -m backend.app
