@@ -8,8 +8,7 @@ export default defineConfig({
     port: 3000,
     proxy: {
       '/api': {
-        // Proxy to backend on port 8000 (online mode with auth)
-        target: 'http://localhost:8000',
+        target: `http://localhost:${process.env.BACKEND_PORT || '8000'}`,
         changeOrigin: true,
         secure: false,
       },
